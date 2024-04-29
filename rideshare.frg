@@ -52,31 +52,27 @@ one sig Board {
     var position : pfunc Int -> Int -> Tile // (int, int) -> thing
 }
 
-pred Wellformed_map {
+pred wellformed_map {
   // Fill in this predicate to ensure that:
   // Each tile is positioned on exactly one square
   // The board is 5x3, so Int ranges from 0-4 and 0-2
   all t: Tile | {
     one r, c: Int | {
-    r >= 0
-    r <= 4
-    c >= 0
-    c <= 2
-      Board.position[r][c] = t
+    (r >= 0) and (r <= 4)
+    (c >= 0) and (c <= 2)
+    Board.position[r][c] = t
     }
   }
 
   no t: Tile | {
     some r, c : Int {
     (r < 0) or (r > 4) or (c < 0) or (c > 2)
+    (r = 1) and (c = 1) //fill in upper middle square
+    (r = 3) and (c = 1) //fill in lower middle square
     Board.position[r][c] = t
     }
   }
 } 
-
-run {
-    Wellformed_map
-}
 
 //Todo:
 -- GOAL: car moves in a direction (ideally towards a passenger)
@@ -84,6 +80,36 @@ run {
 
 //init: (initial state)
 -- Passengers and Cars relatively spread out across the board
+pred init{
+    -- cars at origin 
+    all t: Tile | {
+        all d: Driver | {
+            d in t.drivers
+            one r, c: Int | {
+            (r >= 0) and (r <= 4)
+            (c >= 0) and (c <= 2)
+        
+            d.car.location_x = r
+            d.car.location_y = c
+        }
+    }
+
+        -- people relatively spread on board
+
+        all p: Passenger | {
+            p in t.passengers
+            p.request.fulfilled = 0
+            p.request.claimed = 0
+
+            one x, y: Int | {
+                (x >= 0) and (x <= 4) and (y >= 0) and (y <= 2)
+                p.request.origin_x = x
+                p.request.origin_y = y
+            }
+        }
+    }
+
+}
 
 //wellformed: (hold true for all states)
 -- specify the board/grid/map
@@ -92,6 +118,60 @@ run {
 -- requests
 -- passengers, drivers
 -- movement abilities
+-- capactiy between 0 and 5 (5 just chosen arbitrarily)
+
+pred wellformed{
+    all t: Tile | {
+        all d: Driver | {
+            d in t.drivers
+            one r, c: Int | {
+            (r >= 0) and (r <= 4)
+            (c >= 0) and (c <= 2)
+            
+            d.car.location_x = r
+            d.car.location_y = c
+
+            d.car.capacity <= 5
+            d.car.capacity >= 0
+
+            some p: Passenger | {
+                no p or
+                p in d.car.passengers_in_car
+            }
+        }
+    }
+
+        -- people relatively spread on board
+
+        all p: Passenger | {
+            p in t.passengers
+
+            p.request.party_size >=0
+            p.request.party_size <= 5 //later change this to current capacity
+
+            one x, y, xx, yy: Int | {
+                (xx = x) implies {y != yy} //origin does not equal destination
+
+                (x >= 0) and (x <= 4) and (y >= 0) and (y <= 2)
+                (xx >= 0) and (xx <= 4) and (yy >= 0) and (yy <= 2)
+                
+                p.request.origin_x = x
+                p.request.origin_y = y
+
+                p.request.destination_x = xx
+                p.request.destination_x = yy
+
+            }
+        }
+    }
+
+}
+
+run {
+    wellformed_map
+    init
+    wellformed
+} for exactly 1 Driver, 1 Passenger
 
 //actions:
 -- passengers need to move with the car
