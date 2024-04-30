@@ -75,7 +75,6 @@ pred wellformed_map {
   all p: Passenger | {
     one row, col: Int | {
         Board.pos_pass[row][col] = p
-
     }
   }
 } 
@@ -100,8 +99,9 @@ pred init{
     
         d.location_x = row
         d.location_y = col
+        }
 
-        -- no requests
+         -- no requests
         no d.current_request --INITIALLY
         no d.next_request --INITIALLY
         no d.accepted_requests
@@ -117,7 +117,8 @@ pred init{
         -- no passengers in cars to begin with
         p not in d.passengers_in_car
 
-        }
+        -- passenger begins at requested location
+        Board.pos_pass[p.request.origin_x][p.request.origin_y] = p
     }
         -- people relatively spread on board --> not sure how to do this yet
 }
@@ -180,36 +181,38 @@ pred wellformed{
             p.request.party_size >= 0
             p.request.party_size <= 4 //later change this to current capacity
 
+
+
             one x, y, xx, yy: Int | {
                 not ((xx = x) and {y = yy}) //origin does not equal destination
 
                 (x >= 0) and (x <= 4) and (y >= 0) and (y <= 2)
                 (xx >= 0) and (xx <= 4) and (yy >= 0) and (yy <= 2)
                 
-                p.request.origin_x = x
-                p.request.origin_y = y
+                (p.request).origin_x = x
+                (p.request).origin_y = y
 
-                p.request.destination_x = xx
-                p.request.destination_x = yy
+                (p.request).destination_x = xx
+                (p.request).destination_x = yy
             }
         }
 }
 
 run {
     wellformed_map
-    init
+    // init
     wellformed
-} for exactly 1 Driver, 1 Passenger
+} for exactly 1 Passenger, 1 Driver
 
 --Today: move predicates!!
 
-pred moveEastEnabled[d: Driver]{
-    d.location_x != 2 //can't move right if on edge
+// pred moveEastEnabled[d: Driver]{
+//     d.location_x != 2 //can't move right if on edge
 
-    some p: Passenger | {
-        p.request = 
-    }
-}
+//     some p: Passenger | {
+//         p.request = 
+//     }
+// }
 
 //actions:
 -- for every passenger if there request is being fulfilled they are in a car
