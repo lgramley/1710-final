@@ -133,8 +133,28 @@ pred init{
 
 pred wellformed{
     --ALSO handle bounds of driver and passenger requets
-    
+
         all d: Driver | {
+            -- can probably do this in a better way
+            d.current_request.origin_x >=0 and d.current_request.origin_x <=4
+            d.current_request.origin_y >=0 and d.current_request.origin_y <=2
+            d.current_request.destination_x >=0 and d.current_request.destination_x <=2
+            d.current_request.destination_y >=0 and d.current_request.destination_y <=2
+
+            d.next_request.origin_x >=0 and d.next_request.origin_x <=4
+            d.next_request.origin_y >=0 and d.next_request.origin_y <=2
+            d.next_request.destination_x >=0 and d.next_request.destination_x <=2
+            d.next_request.destination_y >=0 and d.next_request.destination_y <=2
+
+            d.current_request.fulfilled = 0 or d.current_request.fulfilled = 1
+            d.current_request.claimed = 0 or d.current_request.claimed = 1
+            d.next_request.fulfilled = 0 or d.next_request.fulfilled = 1
+            d.next_request.claimed = 0 or d.next_request.claimed = 1
+
+            d.current_request.party_size >= 0 or d.current_request.party_size <= 4
+            d.next_request.party_size = 0 or d.next_request.party_size <= 4
+
+
 
             one r, c: Int | {
                 (r >= 0) and (r <= 4)
@@ -180,6 +200,16 @@ run {
     init
     wellformed
 } for exactly 1 Driver, 1 Passenger
+
+--Today: move predicates!!
+
+pred moveEastEnabled[d: Driver]{
+    d.location_x != 2 //can't move right if on edge
+
+    some p: Passenger | {
+        p.request = 
+    }
+}
 
 //actions:
 -- for every passenger if there request is being fulfilled they are in a car
