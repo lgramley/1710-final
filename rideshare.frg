@@ -1,6 +1,6 @@
 #lang forge/temporal
 option max_tracelength 14
-
+option min_tracelength 5
 
 --Sigs--
 sig Request {
@@ -32,7 +32,7 @@ sig Driver {
     var next_request: one Request,
     var location_x: lone Int,
     var location_y: lone Int,
-    passengers_in_car: set Passenger
+    var passengers_in_car: set Passenger
 }
 
 abstract sig Direction {}
@@ -42,7 +42,7 @@ one sig North extends Direction {}
 one sig South extends Direction {}
 
 --RequestList (global list of requests)
-sig RequestsList{
+one sig RequestsList{
     var all_requests: set Request
 }
 
@@ -96,15 +96,17 @@ pred init{
         one row, col: Int | {
         (row >= 0) and (row <= 4)
         (col >= 0) and (col <= 2)
+        // row = 0
+        // col = 0
     
         d.location_x = row
         d.location_y = col
         }
 
-         -- no requests
-        no d.current_request --INITIALLY
-        no d.next_request --INITIALLY
-        no d.accepted_requests
+        //  -- no requests -- adjust this logic later to avoid unsat with wellformed and init running together
+        // no d.current_request --INITIALLY
+        // no d.next_request --INITIALLY
+        // no d.accepted_requests
 
         --passenger logic
         p.request.fulfilled = 0
@@ -135,27 +137,37 @@ pred init{
 pred wellformed{
     --ALSO handle bounds of driver and passenger requets
 
+        --requets all tied to a passenger
+        all r: Request {
+            some p: Passenger, d: Driver | {
+                p.request = r
+                (d.current_request = r) or
+                (d.next_request = r) or
+                (d.accepted_requests) = r
+            }
+        }
+
         all d: Driver | {
             -- can probably do this in a better way
+            
             d.current_request.origin_x >=0 and d.current_request.origin_x <=4
             d.current_request.origin_y >=0 and d.current_request.origin_y <=2
             d.current_request.destination_x >=0 and d.current_request.destination_x <=2
             d.current_request.destination_y >=0 and d.current_request.destination_y <=2
 
-            d.next_request.origin_x >=0 and d.next_request.origin_x <=4
-            d.next_request.origin_y >=0 and d.next_request.origin_y <=2
-            d.next_request.destination_x >=0 and d.next_request.destination_x <=2
-            d.next_request.destination_y >=0 and d.next_request.destination_y <=2
+            // d.next_request.origin_x >=0 and d.next_request.origin_x <=4
+            // d.next_request.origin_y >=0 and d.next_request.origin_y <=2
+            // d.next_request.destination_x >=0 and d.next_request.destination_x <=2
+            // d.next_request.destination_y >=0 and d.next_request.destination_y <=2
 
-            d.current_request.fulfilled = 0 or d.current_request.fulfilled = 1
-            d.current_request.claimed = 0 or d.current_request.claimed = 1
-            d.next_request.fulfilled = 0 or d.next_request.fulfilled = 1
-            d.next_request.claimed = 0 or d.next_request.claimed = 1
+            d.current_request.fulfilled = 0 //or d.current_request.fulfilled = 1
+            d.current_request.claimed = 0 //or d.current_request.claimed = 1
+            
+            // d.next_request.fulfilled = 0 or d.next_request.fulfilled = 1
+            // d.next_request.claimed = 0 or d.next_request.claimed = 1
 
             d.current_request.party_size >= 0 or d.current_request.party_size <= 4
-            d.next_request.party_size = 0 or d.next_request.party_size <= 4
-
-
+            // d.next_request.party_size = 0 or d.next_request.party_size <= 4
 
             one r, c: Int | {
                 (r >= 0) and (r <= 4)
@@ -177,41 +189,127 @@ pred wellformed{
         -- people relatively spread on board
 
         all p: Passenger | {
-
+            one p.request
             p.request.party_size >= 0
             p.request.party_size <= 4 //later change this to current capacity
 
+            p.request.origin_x >= 0
+            p.request.origin_y >= 0
+            p.request.origin_x <= 4
+            p.request.origin_y <= 2
+            p.request.destination_x >= 0
+            p.request.destination_y >= 0
+            p.request.destination_x <= 4
+            p.request.destination_y <= 2
 
+            p.request.fulfilled = 0 or p.request.fulfilled = 1
+            p.request.claimed = 0 or p.request.claimed = 1
 
-            one x, y, xx, yy: Int | {
-                not ((xx = x) and {y = yy}) //origin does not equal destination
-
-                (x >= 0) and (x <= 4) and (y >= 0) and (y <= 2)
-                (xx >= 0) and (xx <= 4) and (yy >= 0) and (yy <= 2)
-                
-                (p.request).origin_x = x
-                (p.request).origin_y = y
-
-                (p.request).destination_x = xx
-                (p.request).destination_x = yy
+            (p.request.origin_x = p.request.destination_x) implies{
+                p.request.origin_y != p.request.destination_y
             }
         }
 }
 
-run {
-    wellformed_map
-    // init
-    wellformed
-} for exactly 1 Passenger, 1 Driver
+// run {
+//     wellformed_map
+//     init
+//     wellformed
+// } for exactly 1 Driver, 1 Passenger
 
 --Today: move predicates!!
 
-// pred moveEastEnabled[d: Driver]{
-//     d.location_x != 2 //can't move right if on edge
+--maybe make this direction specific later
 
-//     some p: Passenger | {
-//         p.request = 
-//     }
+pred moveRightEnabled[d: Driver]{
+    d.location_x != 2 //can't move right if on edge
+    (d.location_x != 0 and d.location_y != 1)
+    (d.location_x != 0 and d.location_y != 3)
+}
+
+pred moveRight[d: Driver]{
+    --column increases, row stays the same
+    moveRightEnabled[d]
+
+    -- next position needs to be row same, location_y + 1
+    // no (Board.pos_driver[d.location_x][d.location_y])' 
+    // (Board.pos_driver[d.location_x][add[d.location_y,1]])' = d
+     (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][add[d.location_y,1]])
+    // d.location_y' = d.location_y + 1
+    // d.location_x' = d.location_x
+
+    -- everything else stays the same
+}
+
+pred moveLeftEnabled[d: Driver]{
+    d.location_x != 0 //can't move right if on edge
+    // (d.location_x != 0 and d.location_y != 1)
+    // (d.location_x != 0 and d.location_y != 3)
+}
+
+pred moveLeft[d: Driver]{
+    --column increases, row stays the same
+    moveLeftEnabled[d]
+
+    -- next position needs to be row same, location_y + 1
+    // no (Board.pos_driver[d.location_x][d.location_y])' 
+    // (Board.pos_driver[d.location_x][subtract[d.location_y,1]])' = d
+    (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][subtract[d.location_y,1]])
+    // d.location_y' = d.location_y - 1
+    // d.location_x' = d.location_x
+
+    -- everything else stays the same
+}
+
+pred stayStill[d: Driver]{
+    d.location_x' = d.location_x
+    d.location_y' = d.location_y
+
+    --add all the other constraints later
+}
+
+pred traces{
+    always wellformed_map
+    always wellformed
+    init --maybe
+    // all d: Driver | moveRight[d]//always{moveRight[d] or stayStill[d]}
+    all d: Driver | always{moveRight[d] or moveLeft[d]}// or stayStill[d]}
+}
+
+run{
+    traces
+} for exactly 1 Driver, 1 Passenger
+
+pred pickUpCurIfRequesting[d: Driver] {
+	pickUpEnabled[e] => pickUp[e]
+}
+
+pred pickUpEnabled[d: Driver] {
+     // if a driver is in the same cell as a passenger
+    // and they are sharing a request of some sort (don't have have to worry about this for now)
+}
+
+// pred pickUp[d: Driver, p: Passenger] {
+//     pickUpEnabled[d]
+
+//     // driver stays still during pick up 
+//     d.location_x' = d.location_x
+//     d.location_y' = d.location_y
+
+//     // passenger added to driver' passengers
+//     p in d.passengers_in_car'
+
+//     // request doesn't rly change
+// }
+
+// pred moveDownEnabled[d: Driver]{
+
+// }
+// pred moveUpEnabled[d: Driver]{
+    
+// }
+// pred moveLeftEnabled[d: Driver]{
+    
 // }
 
 //actions:
@@ -233,7 +331,9 @@ run {
 //traces: 
 --reasonable pick up and drop off logic
 
-//procedures:
+//procedures
+
+//Tests!!!!!!!!!!!!!!!!
 
 // 0 0 0
 // 0 X 0
