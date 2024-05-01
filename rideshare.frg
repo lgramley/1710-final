@@ -230,9 +230,11 @@ pred moveRight[d: Driver]{
     moveRightEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-     (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][add[d.location_y,1]])
-    // d.location_y' = d.location_y + 1
-    // d.location_x' = d.location_x
+    //(Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][add[d.location_y,1]])
+    d.location_y' = d.location_y
+    d.location_x' = add[d.location_x,1]
+    (Board.pos_driver[d.location_x][d.location_y])' = d
+
     -- everything else stays the same
     d.capacity' = d.capacity
     d.accepted_requests' = d.accepted_requests
@@ -253,9 +255,11 @@ pred moveLeft[d: Driver]{
     moveLeftEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-    (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][subtract[d.location_y,1]])
-    // d.location_y' = d.location_y - 1
-    // d.location_x' = d.location_x
+    //(Board.pos_driver[d.location_x][d.location_y])' = 
+    //(Board.pos_driver[d.location_x][subtract[d.location_y,1]])' = d
+    d.location_y' = d.location_y
+    d.location_x' = subtract[d.location_x,1]
+    (Board.pos_driver[d.location_x][d.location_y])' = d
 
     -- everything else stays the same
     d.capacity' = d.capacity
@@ -276,10 +280,11 @@ pred moveUp[d: Driver]{
     moveUpEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-    (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[add[d.location_x, 1]][d.location_y])
-    // d.location_y' = d.location_y - 1
-    // d.location_x' = d.location_x
-
+    //(Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[add[d.location_x, 1]][d.location_y])
+    //(Board.pos_driver[add[d.location_x, 1]][d.location_y])' = d
+    d.location_y' = add[d.location_y,1]
+    d.location_x' = d.location_x
+    (Board.pos_driver[d.location_x][d.location_y])' = d
     -- everything else stays the same
     d.capacity' = d.capacity
     d.accepted_requests' = d.accepted_requests
@@ -300,10 +305,11 @@ pred moveDown[d: Driver]{
 
     -- next position needs to be row same, location_y + 1
   
-    (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[subtract[d.location_x, 1]][d.location_y])
-    // d.location_y' = d.location_y - 1
-    // d.location_x' = d.location_x
-
+    //(Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[subtract[d.location_x, 1]][d.location_y])
+    //(Board.pos_driver[subtract[d.location_x, 1]][d.location_y])' = d
+    d.location_y' = subtract[d.location_y, 1]
+    d.location_x' = d.location_x
+    (Board.pos_driver[d.location_x][d.location_y])' = d
     -- everything else stays the same
     d.capacity' = d.capacity
     d.accepted_requests' = d.accepted_requests
@@ -335,7 +341,7 @@ pred traces{
     always wellformed
     init --maybe
     // all d: Driver | moveRight[d]//always{moveRight[d] or stayStill[d]}
-    all d: Driver | always{moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or stayStill[d]}// or stayStill[d]}
+    all d: Driver | always{moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d]}// or stayStill[d]}
 }
 
 run{
