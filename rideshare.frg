@@ -219,8 +219,6 @@ pred wellformed{
 
 --Today: move predicates!!
 
---maybe make this direction specific later
-
 pred moveRightEnabled[d: Driver]{
     d.location_x != 2 //can't move right if on edge
     (d.location_x != 0 and d.location_y != 1)
@@ -232,33 +230,86 @@ pred moveRight[d: Driver]{
     moveRightEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-    // no (Board.pos_driver[d.location_x][d.location_y])' 
-    // (Board.pos_driver[d.location_x][add[d.location_y,1]])' = d
      (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][add[d.location_y,1]])
     // d.location_y' = d.location_y + 1
     // d.location_x' = d.location_x
-
     -- everything else stays the same
+    d.capacity' = d.capacity
+    d.accepted_requests' = d.accepted_requests
+    d.current_request' = d.current_request
+    d.next_request' = d.next_request
+    d.passengers_in_car' = d.passengers_in_car
 }
 
 pred moveLeftEnabled[d: Driver]{
     d.location_x != 0 //can't move right if on edge
-    // (d.location_x != 0 and d.location_y != 1)
-    // (d.location_x != 0 and d.location_y != 3)
+    (d.location_x != 2 and d.location_y != 1)
+    (d.location_x != 2 and d.location_y != 3)
 }
+
 
 pred moveLeft[d: Driver]{
     --column increases, row stays the same
     moveLeftEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-    // no (Board.pos_driver[d.location_x][d.location_y])' 
-    // (Board.pos_driver[d.location_x][subtract[d.location_y,1]])' = d
     (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][subtract[d.location_y,1]])
     // d.location_y' = d.location_y - 1
     // d.location_x' = d.location_x
 
     -- everything else stays the same
+    d.capacity' = d.capacity
+    d.accepted_requests' = d.accepted_requests
+    d.current_request' = d.current_request
+    d.next_request' = d.next_request
+    d.passengers_in_car' = d.passengers_in_car
+}
+
+pred moveUpEnabled[d: Driver]{
+    d.location_y != 0 //can't move right if on edge
+    (d.location_x != 1 and d.location_y != 4)
+    (d.location_x != 1 and d.location_y != 2)
+}
+
+pred moveUp[d: Driver]{
+    --column increases, row stays the same
+    moveUpEnabled[d]
+
+    -- next position needs to be row same, location_y + 1
+    (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[add[d.location_x, 1]][d.location_y])
+    // d.location_y' = d.location_y - 1
+    // d.location_x' = d.location_x
+
+    -- everything else stays the same
+    d.capacity' = d.capacity
+    d.accepted_requests' = d.accepted_requests
+    d.current_request' = d.current_request
+    d.next_request' = d.next_request
+    d.passengers_in_car' = d.passengers_in_car
+}
+
+pred moveDownEnabled[d: Driver]{
+    d.location_y != 2 //can't move right if on edge
+    (d.location_x != 1 and d.location_y != 0)
+    (d.location_x != 1 and d.location_y != 2)
+}
+
+pred moveDown[d: Driver]{
+    --column increases, row stays the same
+    moveDownEnabled[d]
+
+    -- next position needs to be row same, location_y + 1
+  
+    (Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[subtract[d.location_x, 1]][d.location_y])
+    // d.location_y' = d.location_y - 1
+    // d.location_x' = d.location_x
+
+    -- everything else stays the same
+    d.capacity' = d.capacity
+    d.accepted_requests' = d.accepted_requests
+    d.current_request' = d.current_request
+    d.next_request' = d.next_request
+    d.passengers_in_car' = d.passengers_in_car
 }
 
 pred stayStill[d: Driver]{
@@ -266,28 +317,39 @@ pred stayStill[d: Driver]{
     d.location_y' = d.location_y
 
     --add all the other constraints later
+    -- everything stays the same:
+    d.capacity' = d.capacity
+    d.accepted_requests' = d.accepted_requests
+    d.current_request' = d.current_request
+    d.next_request' = d.next_request
+    d.passengers_in_car' = d.passengers_in_car
 }
 
+--today 
+ --pick up logic
+ --drop off logic
+ --passenger moves with car
+ --then start to work out kinks
 pred traces{
     always wellformed_map
     always wellformed
     init --maybe
     // all d: Driver | moveRight[d]//always{moveRight[d] or stayStill[d]}
-    all d: Driver | always{moveRight[d] or moveLeft[d]}// or stayStill[d]}
+    all d: Driver | always{moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or stayStill[d]}// or stayStill[d]}
 }
 
 run{
     traces
 } for exactly 1 Driver, 1 Passenger
 
-pred pickUpCurIfRequesting[d: Driver] {
-	pickUpEnabled[e] => pickUp[e]
-}
+// pred pickUpCurIfRequesting[d: Driver] {
+// 	pickUpEnabled[e] => pickUp[e]
+// }
 
-pred pickUpEnabled[d: Driver] {
-     // if a driver is in the same cell as a passenger
-    // and they are sharing a request of some sort (don't have have to worry about this for now)
-}
+// pred pickUpEnabled[d: Driver] {
+//      // if a driver is in the same cell as a passenger
+//     // and they are sharing a request of some sort (don't have have to worry about this for now)
+// }
 
 // pred pickUp[d: Driver, p: Passenger] {
 //     pickUpEnabled[d]
