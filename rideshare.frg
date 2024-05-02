@@ -352,33 +352,50 @@ run{
 // 	pickUpEnabled[e] => pickUp[e]
 // }
 
-// pred pickUpEnabled[d: Driver] {
-//      // if a driver is in the same cell as a passenger
-//     // and they are sharing a request of some sort (don't have have to worry about this for now)
-// }
+pred pickUpEnabled[d: Driver, p: Passenger] {
+     // if a driver is in the same cell as a passenger
+    // and they are sharing a request of some sort (don't have have to worry about this for now)
+    d.location_x = p.request.origin_x
+    d.location_y = p.request.origin_y
+    p.request.claimed = 0
+    p.request.fulfilled = 0
+    //capacity is greater than number of passengers in car + party size
+    d.capacity > (add[#{d.passengers_in_car}, p.request.party_size])
+}
 
-// pred pickUp[d: Driver, p: Passenger] {
-//     pickUpEnabled[d]
+pred pickUp[d: Driver, p: Passenger] {
+    pickUpEnabled[d]
 
-//     // driver stays still during pick up 
-//     d.location_x' = d.location_x
-//     d.location_y' = d.location_y
+    // driver stays still during pick up 
+    d.location_x' = d.location_x
+    d.location_y' = d.location_y
 
-//     // passenger added to driver' passengers
-//     p in d.passengers_in_car'
+    // passenger added to driver' passengers
+    p in d.passengers_in_car'
 
-//     // request doesn't rly change
-// }
+    // request doesn't rly change
+    p.request.claimed' = 1
 
-// pred moveDownEnabled[d: Driver]{
+    p.request in d.accepted_requests'
+    d.current_request' = p.request
+    d.next_request' = d.next_request
+}
 
-// }
-// pred moveUpEnabled[d: Driver]{
-    
-// }
-// pred moveLeftEnabled[d: Driver]{
-    
-// }
+//maybe doesnt need passenger
+pred dropOffEnabled[d: Driver, p: Passenger] {
+    d.location_x = p.request.destination_x
+    d.location_y = p.request.destination_y
+
+}
+
+pred drofOff[d: Driver, p: Passenger] {
+
+    p.request.fulfilled' = 1
+    p.request.claimed' = 0 //goes back to being unclaimed?? how do we want to handle this
+
+    //passenger no longer in driver' passengers
+    p not in d.passengers_in_car'
+}
 
 //actions:
 -- for every passenger if there request is being fulfilled they are in a car
