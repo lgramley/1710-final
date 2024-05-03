@@ -1,5 +1,5 @@
 #lang forge/temporal
-option max_tracelength 14
+option max_tracelength 25
 option min_tracelength 5
 
 --Sigs--
@@ -18,13 +18,6 @@ sig Passenger {
     request: one Request
 }
 
-// sig Car{
-//     capacity: one Int,
-//     // var location_x: lone Int,
-//     // var location_y: lone Int,
-//     passengers_in_car: set Passenger
-// }
-
 sig Driver {
     capacity: one Int,
     var accepted_requests: set Request,
@@ -34,12 +27,6 @@ sig Driver {
     var location_y: lone Int,
     var passengers_in_car: set Passenger
 }
-
-abstract sig Direction {}
-one sig East extends Direction {} 
-one sig West extends Direction {}
-one sig North extends Direction {}
-one sig South extends Direction {}
 
 --RequestList (global list of requests)
 one sig RequestsList{
@@ -135,6 +122,8 @@ pred init{
 -- capactiy between 0 and 5 (5 just chosen arbitrarily)
 
 pred wellformed{
+
+
     --ALSO handle bounds of driver and passenger requets
 
         --requets all tied to a passenger
@@ -150,23 +139,23 @@ pred wellformed{
         all d: Driver | {
             -- can probably do this in a better way
             
-            d.current_request.origin_x >=0 and d.current_request.origin_x <=4
-            d.current_request.origin_y >=0 and d.current_request.origin_y <=2
-            d.current_request.destination_x >=0 and d.current_request.destination_x <=2
-            d.current_request.destination_y >=0 and d.current_request.destination_y <=2
+            // d.current_request.origin_x >=0 and d.current_request.origin_x <=4
+            // d.current_request.origin_y >=0 and d.current_request.origin_y <=2
+            // d.current_request.destination_x >=0 and d.current_request.destination_x <=2
+            // d.current_request.destination_y >=0 and d.current_request.destination_y <=2
 
             // d.next_request.origin_x >=0 and d.next_request.origin_x <=4
             // d.next_request.origin_y >=0 and d.next_request.origin_y <=2
             // d.next_request.destination_x >=0 and d.next_request.destination_x <=2
             // d.next_request.destination_y >=0 and d.next_request.destination_y <=2
 
-            d.current_request.fulfilled = 0 //or d.current_request.fulfilled = 1
-            d.current_request.claimed = 0 //or d.current_request.claimed = 1
+            // d.current_request.fulfilled = 0 or d.current_request.fulfilled = 1
+            // d.current_request.claimed = 0 or d.current_request.claimed = 1
             
             // d.next_request.fulfilled = 0 or d.next_request.fulfilled = 1
             // d.next_request.claimed = 0 or d.next_request.claimed = 1
 
-            d.current_request.party_size >= 0 or d.current_request.party_size <= 4
+            //d.current_request.party_size >= 0 or d.current_request.party_size <= 4
             // d.next_request.party_size = 0 or d.next_request.party_size <= 4
 
             one r, c: Int | {
@@ -188,6 +177,8 @@ pred wellformed{
 
         -- people relatively spread on board
 
+        --passenger should stay still unless picked up by driver!
+
         all p: Passenger | {
             one p.request
             p.request.party_size >= 0
@@ -202,11 +193,14 @@ pred wellformed{
             p.request.destination_x <= 4
             p.request.destination_y <= 2
 
-            p.request.fulfilled = 0 or p.request.fulfilled = 1
-            p.request.claimed = 0 or p.request.claimed = 1
+            //(p.request.fulfilled = 0) or (p.request.fulfilled = 1)
+            (p.request.claimed = 0) or (p.request.claimed = 1)
 
             (p.request.origin_x = p.request.destination_x) implies{
                 p.request.origin_y != p.request.destination_y
+            }
+            some d : Driver | p not in d.passengers_in_car implies{
+                Board.pos_pass[p.request.origin_x][p.request.origin_y] = p
             }
         }
 }
@@ -241,6 +235,13 @@ pred moveRight[d: Driver]{
     d.current_request' = d.current_request
     d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
+
+    -- 
+    all p: d.passengers_in_car | {
+        (Board.pos_pass[d.location_x][d.location_y])' = p
+        //p.request.claimed' = 1
+        //p.request.fulfilled' = p.request.fulfilled
+    }
 }
 
 pred moveLeftEnabled[d: Driver]{
@@ -267,6 +268,12 @@ pred moveLeft[d: Driver]{
     d.current_request' = d.current_request
     d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
+
+    all p: d.passengers_in_car | {
+       (Board.pos_pass[d.location_x][d.location_y])' = p
+        //p.request.claimed' = 1
+        //p.request.fulfilled' = p.request.fulfilled
+    }
 }
 
 pred moveUpEnabled[d: Driver]{
@@ -291,6 +298,11 @@ pred moveUp[d: Driver]{
     d.current_request' = d.current_request
     d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
+    all p: d.passengers_in_car | {
+        (Board.pos_pass[d.location_x][d.location_y])' = p
+        //p.request.claimed' = 1
+        //p.request.fulfilled' = p.request.fulfilled
+    }
 }
 
 pred moveDownEnabled[d: Driver]{
@@ -316,6 +328,11 @@ pred moveDown[d: Driver]{
     d.current_request' = d.current_request
     d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
+    all p: d.passengers_in_car | {
+        (Board.pos_pass[d.location_x][d.location_y])' = p
+        //p.request.claimed' = 1
+        //p.request.fulfilled' = p.request.fulfilled
+    }
 }
 
 pred stayStill[d: Driver]{
@@ -336,18 +353,6 @@ pred stayStill[d: Driver]{
  --drop off logic
  --passenger moves with car
  --then start to work out kinks
-pred traces{
-    always wellformed_map
-    always wellformed
-    init --maybe
-    // all d: Driver | moveRight[d]//always{moveRight[d] or stayStill[d]}
-    all d: Driver | always{moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d]}// or stayStill[d]}
-}
-
-run{
-    traces
-} for exactly 1 Driver, 1 Passenger
-
 // pred pickUpCurIfRequesting[d: Driver] {
 // 	pickUpEnabled[e] => pickUp[e]
 // }
@@ -360,13 +365,13 @@ pred pickUpEnabled[d: Driver, p: Passenger] {
     p.request.claimed = 0
     p.request.fulfilled = 0
     //capacity is greater than number of passengers in car + party size
-    d.capacity > (add[#{d.passengers_in_car}, p.request.party_size])
+    d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
 }
 
 pred pickUp[d: Driver, p: Passenger] {
-    pickUpEnabled[d]
+    pickUpEnabled[d,p]
 
-    // driver stays still during pick up 
+    // driver location stays still during pick up 
     d.location_x' = d.location_x
     d.location_y' = d.location_y
 
@@ -375,10 +380,14 @@ pred pickUp[d: Driver, p: Passenger] {
 
     // request doesn't rly change
     p.request.claimed' = 1
+    p.request.fulfilled' = p.request.fulfilled
+
 
     p.request in d.accepted_requests'
     d.current_request' = p.request
     d.next_request' = d.next_request
+    
+    (Board.pos_pass[p.request.origin_x][p.request.origin_y])' = p
 }
 
 //maybe doesnt need passenger
@@ -428,3 +437,18 @@ pred drofOff[d: Driver, p: Passenger] {
 
 //last but not least..... visualizer
 
+pred traces {
+    always wellformed_map
+    always wellformed
+    init --maybe
+    // all d: Driver | moveRight[d]//always{moveRight[d] or stayStill[d]}
+    all d: Driver, p: Passenger | always{
+        moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p]
+        eventually{pickUp[d,p]}
+    }
+    
+}
+
+run{
+    traces
+} for exactly 1 Driver, 1 Passenger
