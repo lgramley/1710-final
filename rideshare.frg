@@ -1,6 +1,6 @@
 #lang forge/temporal
 option max_tracelength 25
-option min_tracelength 5
+option min_tracelength 10
 
 --Sigs--
 sig Request {
@@ -193,7 +193,7 @@ pred wellformed{
             p.request.destination_x <= 4
             p.request.destination_y <= 2
 
-            //(p.request.fulfilled = 0) or (p.request.fulfilled = 1)
+            (p.request.fulfilled = 0) or (p.request.fulfilled = 1)
             (p.request.claimed = 0) or (p.request.claimed = 1)
 
             (p.request.origin_x = p.request.destination_x) implies{
@@ -239,7 +239,7 @@ pred moveRight[d: Driver]{
     -- 
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        //p.request.claimed' = 1
+        // p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -271,7 +271,7 @@ pred moveLeft[d: Driver]{
 
     all p: d.passengers_in_car | {
        (Board.pos_pass[d.location_x][d.location_y])' = p
-        //p.request.claimed' = 1
+        // p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -300,7 +300,7 @@ pred moveUp[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        //p.request.claimed' = 1
+        // p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -330,7 +330,7 @@ pred moveDown[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        //p.request.claimed' = 1
+        // p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -382,7 +382,6 @@ pred pickUp[d: Driver, p: Passenger] {
     p.request.claimed' = 1
     p.request.fulfilled' = p.request.fulfilled
 
-
     p.request in d.accepted_requests'
     d.current_request' = p.request
     d.next_request' = d.next_request
@@ -395,15 +394,27 @@ pred dropOffEnabled[d: Driver, p: Passenger] {
     d.location_x = p.request.destination_x
     d.location_y = p.request.destination_y
 
+    //do we need to say that a passenger is in a car??
+    p in d.passengers_in_car
 }
 
-pred drofOff[d: Driver, p: Passenger] {
+pred dropOff[d: Driver, p: Passenger] {
+    dropOffEnabled[d,p]
+    //location stays the same:
+    d.location_x' = d.location_x
+    d.location_y' = d.location_y
 
     p.request.fulfilled' = 1
     p.request.claimed' = 0 //goes back to being unclaimed?? how do we want to handle this
 
     //passenger no longer in driver' passengers
     p not in d.passengers_in_car'
+
+    //removed from accepted requests (if thats how we choose to handle it)
+    p.request not in d.accepted_requests'
+    // d.current_request' = p.request -- not sure how to handle this
+    // d.next_request' = d.next_request
+    (Board.pos_pass[p.request.destination_x][p.request.destination_y])' = p
 }
 
 //actions:
@@ -443,8 +454,18 @@ pred traces {
     init --maybe
     // all d: Driver | moveRight[d]//always{moveRight[d] or stayStill[d]}
     all d: Driver, p: Passenger | always{
-        moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p]
+        moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p]
         eventually{pickUp[d,p]}
+        // eventually {{not dropOff[d,p]} until{{pickUp[d,p]}}}
+        // always {eventually {dropOff[d, p]}}
+        // eventually{pickUp[d,p]} implies {dropOff[d,p]}
+        --cant seem to get pickup and drop off to work together
+        -- I want to say that we always eventually pick up and then because we pick up
+            --we always eventually drop off
+        // not dropOff[d,p] until{pickUp[d,p]}
+        // eventually{pickUp[d,p]}
+        // eventually{dropOff[d,p]}
+
     }
     
 }
