@@ -408,12 +408,12 @@ pred dropOff[d: Driver, p: Passenger] {
     p.request.claimed' = 0 //goes back to being unclaimed?? how do we want to handle this
 
     //passenger no longer in driver' passengers
-    p not in d.passengers_in_car'
+    d.passengers_in_car' = d.passengers_in_car - p
 
     //removed from accepted requests (if thats how we choose to handle it)
-    p.request not in d.accepted_requests'
-    // d.current_request' = p.request -- not sure how to handle this
-    // d.next_request' = d.next_request
+    d.accepted_requests' = d.accepted_requests - p.request
+    d.current_request' = d.next_request -- not sure how to handle this
+    d.next_request' = d.next_request --specify that it is any request from the request list?
     (Board.pos_pass[p.request.destination_x][p.request.destination_y])' = p
 }
 
@@ -456,6 +456,7 @@ pred traces {
     all d: Driver, p: Passenger | always{
         moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p]
         eventually{pickUp[d,p]}
+       
         // eventually {{not dropOff[d,p]} until{{pickUp[d,p]}}}
         // always {eventually {dropOff[d, p]}}
         // eventually{pickUp[d,p]} implies {dropOff[d,p]}
