@@ -1,6 +1,10 @@
 #lang forge/temporal
 option max_tracelength 25
 option min_tracelength 10
+// option solver MiniSatProver
+// option core_minimization rce
+// option logtranslation 1
+// option coregranularity 1
 
 --Sigs--
 sig Request {
@@ -239,7 +243,7 @@ pred moveRight[d: Driver]{
     -- 
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        // p.request.claimed' = 1
+        p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -271,7 +275,7 @@ pred moveLeft[d: Driver]{
 
     all p: d.passengers_in_car | {
        (Board.pos_pass[d.location_x][d.location_y])' = p
-        // p.request.claimed' = 1
+        p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -300,7 +304,7 @@ pred moveUp[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        // p.request.claimed' = 1
+        p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -330,7 +334,7 @@ pred moveDown[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        // p.request.claimed' = 1
+        p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -456,6 +460,8 @@ pred traces {
     all d: Driver, p: Passenger | always{
         moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p]
         eventually{pickUp[d,p]}
+        // eventually{pickUp[d,p]} implies eventually{dropOff[d,p]}
+        //once pick up --> move until drop off
        
         // eventually {{not dropOff[d,p]} until{{pickUp[d,p]}}}
         // always {eventually {dropOff[d, p]}}
