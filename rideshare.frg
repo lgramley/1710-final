@@ -1,6 +1,10 @@
 #lang forge/temporal
 option max_tracelength 25
 option min_tracelength 10
+option solver MiniSatProver
+option core_minimization rce
+option logtranslation 1
+option coregranularity 1
 
 --Sigs--
 sig Request {
@@ -201,6 +205,7 @@ pred wellformed{
             }
             some d : Driver | p not in d.passengers_in_car implies{
                 Board.pos_pass[p.request.origin_x][p.request.origin_y] = p
+                p.request.claimed = 0
             }
         }
 }
@@ -230,7 +235,7 @@ pred moveRight[d: Driver]{
     (Board.pos_driver[d.location_x][d.location_y])' = d
 
     -- everything else stays the same
-    d.capacity' = d.capacity
+   
     d.accepted_requests' = d.accepted_requests
     d.current_request' = d.current_request
     d.next_request' = d.next_request
@@ -263,7 +268,7 @@ pred moveLeft[d: Driver]{
     (Board.pos_driver[d.location_x][d.location_y])' = d
 
     -- everything else stays the same
-    d.capacity' = d.capacity
+
     d.accepted_requests' = d.accepted_requests
     d.current_request' = d.current_request
     d.next_request' = d.next_request
@@ -293,14 +298,14 @@ pred moveUp[d: Driver]{
     d.location_x' = d.location_x
     (Board.pos_driver[d.location_x][d.location_y])' = d
     -- everything else stays the same
-    d.capacity' = d.capacity
+    
     d.accepted_requests' = d.accepted_requests
     d.current_request' = d.current_request
     d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        // p.request.claimed' = 1
+        //p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -323,14 +328,14 @@ pred moveDown[d: Driver]{
     d.location_x' = d.location_x
     (Board.pos_driver[d.location_x][d.location_y])' = d
     -- everything else stays the same
-    d.capacity' = d.capacity
+  
     d.accepted_requests' = d.accepted_requests
     d.current_request' = d.current_request
     d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        // p.request.claimed' = 1
+        //p.request.claimed' = p.request.claimed
         //p.request.fulfilled' = p.request.fulfilled
     }
 }
@@ -341,7 +346,7 @@ pred stayStill[d: Driver]{
 
     --add all the other constraints later
     -- everything stays the same:
-    d.capacity' = d.capacity
+   
     d.accepted_requests' = d.accepted_requests
     d.current_request' = d.current_request
     d.next_request' = d.next_request
