@@ -1,16 +1,18 @@
 #lang forge/temporal
-option max_tracelength 25
+option max_tracelength 10
 option min_tracelength 10
-// option solver MiniSatProver
-// option core_minimization rce
-// option logtranslation 1
-// option coregranularity 1
+option solver MiniSatProver
+option core_minimization rce
+option logtranslation 1
+option coregranularity 1
 
 --Sigs--
 sig Request {
     party_size: one Int,
-    var fulfilled: one Int, //(0 , 1)
-    var claimed: one Int, 
+    // var fulfilled: one Int, //(0 , 1)
+    // var claimed: one Int, 
+    var fulfilled: set Request,
+    var claimed: set Request,
     origin_x: one Int,
     origin_y: one Int,
     destination_x: one Int,
@@ -100,8 +102,10 @@ pred init{
         // no d.accepted_requests
 
         --passenger logic
-        p.request.fulfilled = 0
-        p.request.claimed = 0
+        // p.request.fulfilled = 0
+        // p.request.claimed = 0
+        p.request not in p.request.claimed
+        p.request not in p.request.fulfilled
 
         p.request.origin_x = d.location_x implies{
             p.request.origin_y != d.location_y
@@ -197,12 +201,14 @@ pred wellformed{
             p.request.destination_x <= 4
             p.request.destination_y <= 2
 
-            (p.request.fulfilled = 0) or (p.request.fulfilled = 1)
-            (p.request.claimed = 0) or (p.request.claimed = 1)
+            // (p.request.fulfilled = 0) or (p.request.fulfilled = 1)
+            // (p.request.claimed = 0) or (p.request.claimed = 1)
+            
 
             (p.request.origin_x = p.request.destination_x) implies{
                 p.request.origin_y != p.request.destination_y
             }
+            -- issue here maybe?
             some d : Driver | p not in d.passengers_in_car implies{
                 Board.pos_pass[p.request.origin_x][p.request.origin_y] = p
                 p.request.claimed = 0
@@ -244,6 +250,7 @@ pred moveRight[d: Driver]{
     -- 
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
+        p.request in (p.request.claimed)'
         //p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
@@ -276,6 +283,7 @@ pred moveLeft[d: Driver]{
 
     all p: d.passengers_in_car | {
        (Board.pos_pass[d.location_x][d.location_y])' = p
+       p.request in (p.request.claimed)'
         //p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
@@ -305,6 +313,7 @@ pred moveUp[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
+        p.request in (p.request.claimed)'
         //p.request.claimed' = 1
         //p.request.fulfilled' = p.request.fulfilled
     }
@@ -335,6 +344,7 @@ pred moveDown[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
+        p.request in (p.request.claimed)'
         //p.request.claimed' = p.request.claimed
         //p.request.fulfilled' = p.request.fulfilled
     }
@@ -367,8 +377,10 @@ pred pickUpEnabled[d: Driver, p: Passenger] {
     // and they are sharing a request of some sort (don't have have to worry about this for now)
     d.location_x = p.request.origin_x
     d.location_y = p.request.origin_y
-    p.request.claimed = 0
-    p.request.fulfilled = 0
+    p.request not in p.request.claimed
+    p.request not in p.request.fulfilled
+    // p.request.claimed = 0
+    // p.request.fulfilled = 0
     //capacity is greater than number of passengers in car + party size
     d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
 }
@@ -384,8 +396,10 @@ pred pickUp[d: Driver, p: Passenger] {
     p in d.passengers_in_car'
 
     // request doesn't rly change
-    p.request.claimed' = 1
+    // p.request.claimed' = 1
     p.request.fulfilled' = p.request.fulfilled
+    p.request in (p.request.claimed)'
+    
 
     p.request in d.accepted_requests'
     d.current_request' = p.request
@@ -409,8 +423,10 @@ pred dropOff[d: Driver, p: Passenger] {
     d.location_x' = d.location_x
     d.location_y' = d.location_y
 
-    p.request.fulfilled' = 1
-    p.request.claimed' = 0 //goes back to being unclaimed?? how do we want to handle this
+    // p.request.fulfilled' = 1
+    // p.request.claimed' = 0 //goes back to being unclaimed?? how do we want to handle this
+    p.request not in (p.request.claimed)'
+    p.request in (p.request.fulfilled)'
 
     //passenger no longer in driver' passengers
     d.passengers_in_car' = d.passengers_in_car - p
@@ -461,19 +477,21 @@ pred traces {
     all d: Driver, p: Passenger | always{
         moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p]
         eventually{pickUp[d,p]}
+
         // eventually{pickUp[d,p]} implies eventually{dropOff[d,p]}
         //once pick up --> move until drop off
        
         // eventually {{not dropOff[d,p]} until{{pickUp[d,p]}}}
         // always {eventually {dropOff[d, p]}}
         // eventually{pickUp[d,p]} implies {dropOff[d,p]}
+
         --cant seem to get pickup and drop off to work together
         -- I want to say that we always eventually pick up and then because we pick up
             --we always eventually drop off
+
         // not dropOff[d,p] until{pickUp[d,p]}
         // eventually{pickUp[d,p]}
         // eventually{dropOff[d,p]}
-
     }
     
 }
