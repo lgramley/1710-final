@@ -17,7 +17,6 @@ sig Request {
     destination_y: one Int
 }
 
-
 sig Passenger {
     request: one Request
 }
@@ -25,8 +24,6 @@ sig Passenger {
 sig Driver {
     capacity: one Int,
     var accepted_requests: set Request,
-    var current_request: lone Request,
-    var next_request: lone Request,
     var location_x: lone Int,
     var location_y: lone Int,
     var passengers_in_car: set Passenger
@@ -87,17 +84,10 @@ pred init{
         one row, col: Int | {
         (row >= 0) and (row <= 4)
         (col >= 0) and (col <= 2)
-        // row = 0
-        // col = 0
-    
         d.location_x = row
         d.location_y = col
         }
 
-        //  -- no requests -- adjust this logic later to avoid unsat with wellformed and init running together
-        //no d.current_request --INITIALLY
-        // no d.next_request --INITIALLY
-        // no d.accepted_requests
 
         --passenger logic
         p.request.fulfilled = 0
@@ -135,7 +125,6 @@ pred wellformed{
         all r: Request {
             some p: Passenger, d: Driver | {
                 p.request = r
-                (d.current_request = r) or (d.next_request = r) or ( r in d.accepted_requests ) --this makes no sense
             }
             r.party_size >= 0
             r.party_size <= 4 //later change this to current capacity
@@ -155,7 +144,7 @@ pred wellformed{
             (r.origin_x = r.destination_x) implies{
                 r.origin_y != r.destination_y
             }
-
+            r in RequestsList.all_requests
         }
 
         all d: Driver | {
@@ -166,8 +155,6 @@ pred wellformed{
                 (r >= 0) and (r <= 4)
                 (c >= 0) and (c <= 2)
 
-                // d in (Board.position[r][c]).drivers //parens are a must --specify d in board.position
-
                 d.location_x = r
                 d.location_y = c
 
@@ -177,44 +164,27 @@ pred wellformed{
                  -- ensure not more passengers than capacity
                  #{d.passengers_in_car} <= d.capacity //might not need this later     
             }
+            
         }
 
-        -- people relatively spread on board
+        all disj d1, d2: Driver |{
+            d1.accepted_requests not in d2.accepted_requests
+            d2.accepted_requests not in d1.accepted_requests
+        }
 
         --passenger should stay still unless picked up by driver!
-
         all p: Passenger | {
             
-
-            // THIS WAS THE PROBLEM CHILD
-            // some d : Driver | p not in d.passengers_in_car implies{
-            //     Board.pos_pass[p.request.origin_x][p.request.origin_y] = p
-            //     p.request.claimed = 0
-            // }
-
             // if they are not in a car, they cannot move
             some d: Driver | p not in d.passengers_in_car implies {
                 some x, y: Int | {
                     (Board.pos_pass[x][y])' = Board.pos_pass[x][y]
                     Board.pos_pass[x][y] = p
                 }
-            }
-
-            
-
-           
-                // (p in d.passengers_in_car => Board.pos_pass[d.location_x][d.location_y] = p)
-            
-
-            
+            }         
         }
 }
 
-// run {
-//     wellformed_map
-//     init
-//     wellformed
-// } for exactly 1 Driver, 1 Passenger
 
 --Today: move predicates!!
 pred requestsStaySame {
@@ -235,7 +205,6 @@ pred moveRight[d: Driver]{
     moveRightEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-    //(Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[d.location_x][add[d.location_y,1]])
     d.location_y' = d.location_y
     d.location_x' = add[d.location_x,1]
     (Board.pos_driver[d.location_x][d.location_y])' = d
@@ -243,10 +212,7 @@ pred moveRight[d: Driver]{
     -- everything else stays the same
    
     d.accepted_requests' = d.accepted_requests
-    d.current_request' = d.current_request
-    d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
-
     -- 
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
@@ -267,8 +233,6 @@ pred moveLeft[d: Driver]{
     moveLeftEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-    //(Board.pos_driver[d.location_x][d.location_y])' = 
-    //(Board.pos_driver[d.location_x][subtract[d.location_y,1]])' = d
     d.location_y' = d.location_y
     d.location_x' = subtract[d.location_x,1]
     (Board.pos_driver[d.location_x][d.location_y])' = d
@@ -276,16 +240,11 @@ pred moveLeft[d: Driver]{
     -- everything else stays the same
 
     d.accepted_requests' = d.accepted_requests
-    d.current_request' = d.current_request
-    d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
 
     all p: d.passengers_in_car | {
        (Board.pos_pass[d.location_x][d.location_y])' = p
-        //p.request.claimed' = 1
-        //p.request.fulfilled' = p.request.fulfilled
     }
-
     requestsStaySame
 }
 
@@ -300,21 +259,15 @@ pred moveUp[d: Driver]{
     moveUpEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-    //(Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[add[d.location_x, 1]][d.location_y])
-    //(Board.pos_driver[add[d.location_x, 1]][d.location_y])' = d
     d.location_y' = add[d.location_y,1]
     d.location_x' = d.location_x
     (Board.pos_driver[d.location_x][d.location_y])' = d
     -- everything else stays the same
     
     d.accepted_requests' = d.accepted_requests
-    d.current_request' = d.current_request
-    d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        //p.request.claimed' = 1
-        //p.request.fulfilled' = p.request.fulfilled
     }
 
     requestsStaySame
@@ -331,22 +284,14 @@ pred moveDown[d: Driver]{
     moveDownEnabled[d]
 
     -- next position needs to be row same, location_y + 1
-  
-    //(Board.pos_driver[d.location_x][d.location_y])' = (Board.pos_driver[subtract[d.location_x, 1]][d.location_y])
-    //(Board.pos_driver[subtract[d.location_x, 1]][d.location_y])' = d
     d.location_y' = subtract[d.location_y, 1]
     d.location_x' = d.location_x
     (Board.pos_driver[d.location_x][d.location_y])' = d
     -- everything else stays the same
-  
     d.accepted_requests' = d.accepted_requests
-    d.current_request' = d.current_request
-    d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
         (Board.pos_pass[d.location_x][d.location_y])' = p
-        //p.request.claimed' = p.request.claimed
-        //p.request.fulfilled' = p.request.fulfilled
     }
 
     requestsStaySame
@@ -358,30 +303,15 @@ pred stayStill[d: Driver]{
 
     --add all the other constraints later
     -- everything stays the same:
-   
     d.accepted_requests' = d.accepted_requests
-    d.current_request' = d.current_request
-    d.next_request' = d.next_request
     d.passengers_in_car' = d.passengers_in_car
-
     all x, y: Int {
         (Board.pos_driver[x][y])' = Board.pos_driver[x][y]
         (Board.pos_pass[x][y])' = Board.pos_pass[x][y]
     }
 
     requestsStaySame
-
-    
 }
-
---today 
- --pick up logic
- --drop off logic
- --passenger moves with car
- --then start to work out kinks
-// pred pickUpCurIfRequesting[d: Driver] {
-// 	pickUpEnabled[e] => pickUp[e]
-// }
 
 pred pickUpEnabled[d: Driver, p: Passenger] {
      // if a driver is in the same cell as a passenger
@@ -392,6 +322,7 @@ pred pickUpEnabled[d: Driver, p: Passenger] {
     p.request.fulfilled = 0
     //capacity is greater than number of passengers in car + party size
     d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
+    p.request not in d.accepted_requests
 }
 
 pred pickUp[d: Driver, p: Passenger] {
@@ -409,8 +340,6 @@ pred pickUp[d: Driver, p: Passenger] {
     p.request.fulfilled' = p.request.fulfilled
 
     p.request in d.accepted_requests'
-    d.current_request' = p.request
-    d.next_request' = d.next_request
     
     (Board.pos_pass[p.request.origin_x][p.request.origin_y])' = p
 }
@@ -419,8 +348,6 @@ pred pickUp[d: Driver, p: Passenger] {
 pred dropOffEnabled[d: Driver, p: Passenger] {
     d.location_x = p.request.destination_x
     d.location_y = p.request.destination_y
-
-    //do we need to say that a passenger is in a car??
     p in d.passengers_in_car
 }
 
@@ -428,7 +355,7 @@ pred dropOff[d: Driver, p: Passenger] {
     dropOffEnabled[d,p]
 
 
-    // //location stays the same:
+    //location stays the same:
     d.location_x' = d.location_x
     d.location_y' = d.location_y
 
@@ -437,13 +364,9 @@ pred dropOff[d: Driver, p: Passenger] {
 
     p.request.claimed' = p.request.claimed //goes back to being unclaimed?? how do we want to handle this
 
-    // //passenger no longer in driver' passengers
+    //passenger no longer in driver' passengers
     d.passengers_in_car' = d.passengers_in_car - p
 
-    // //removed from accepted requests (if thats how we choose to handle it)
-    //d.accepted_requests' = d.accepted_requests - p.request
-    //d.current_request' = d.next_request -- not sure how to handle this
-    //d.next_request' = d.next_request --specify that it is any request from the request list?
     (Board.pos_pass[p.request.destination_x][p.request.destination_y])' = p
 }
 
@@ -466,18 +389,6 @@ pred dropOff[d: Driver, p: Passenger] {
 //traces: 
 --reasonable pick up and drop off logic
 
-//procedures
-
-//Tests!!!!!!!!!!!!!!!!
-
-// 0 0 0
-// 0 X 0
-// 0 0 0
-// 0 X 0
-// 0 0 0
-
-//last but not least..... visualizer
-
 pred pickUpCurIfRequesting[d: Driver, p: Passenger] {
 	pickUpEnabled[d,p] => pickUp[d,p]
 }
@@ -490,19 +401,28 @@ pred traces {
     always wellformed_map
     always wellformed
     init --maybe
-    // all d: Driver | moveRight[d]//always{moveRight[d] or stayStill[d]}
-    all d: Driver, p: Passenger | {
+    all d: Driver| some p: Passenger | {
         always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p] or stayStill[d]}
-
         eventually{pickUp[d,p]}
         eventually{dropOff[d,p]}
         always pickUpCurIfRequesting[d,p]
         always dropOffCurIfRequesting[d,p]
-
     }
+
     
 }
 
 run{
     traces
-} for exactly 1 Driver, exactly 1 Passenger
+} for exactly 2 Driver, exactly 2 Passenger
+
+// 0 0 0
+// 0 X 0
+// 0 0 0
+// 0 X 0
+// 0 0 0
+
+//procedures
+//Tests!
+//write up
+//visualizer?
