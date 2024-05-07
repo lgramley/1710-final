@@ -82,13 +82,11 @@ pred init{
 
     all d: Driver, p: Passenger | {
         one row, col: Int | {
-        (row >= 0) and (row <= 4)
-        (col >= 0) and (col <= 2)
-        d.location_x = row
-        d.location_y = col
+            (row >= 0) and (row <= 4)
+            (col >= 0) and (col <= 2)
+            d.location_x = row
+            d.location_y = col
         }
-
-
         --passenger logic
         p.request.fulfilled = 0
         p.request.claimed = 0
