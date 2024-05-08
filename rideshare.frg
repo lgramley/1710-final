@@ -150,7 +150,7 @@ pred requestsStaySame {
 }
 
 pred moveRightEnabled[d: Driver]{
-    not {d.location_x = 4 //can't move right if on edge
+    not {d.location_x >= 4 //can't move right if on edge
     or (d.location_x = 0 and d.location_y = 1)
     or (d.location_x = 2 and d.location_y = 1)}
 }
@@ -178,7 +178,7 @@ pred moveRight[d: Driver]{
 }
 
 pred moveLeftEnabled[d: Driver]{
-    not{d.location_x = 0 //can't move right if on edge
+    not{d.location_x <= 0 //can't move right if on edge
     or (d.location_x = 2 and d.location_y = 1)
     or (d.location_x = 4 and d.location_y = 1)}
 }
@@ -206,8 +206,8 @@ pred moveLeft[d: Driver]{
 }
 
 pred moveUpEnabled[d: Driver]{
-    not{d.location_y = 2 //can't move up if on edge
-    or (d.location_x = 1 and d.location_y != 0)
+    not{d.location_y >= 2 //can't move up if on edge
+    or (d.location_x = 1 and d.location_y = 0)
     or (d.location_x = 3 and d.location_y = 0)}
 }
 
@@ -231,7 +231,7 @@ pred moveUp[d: Driver]{
 }
 
 pred moveDownEnabled[d: Driver]{
-    not{d.location_y = 0 //can't move right if on edge
+    not{d.location_y <= 0 //can't move right if on edge
     or (d.location_x = 1 and d.location_y = 2)
     or (d.location_x = 3 and d.location_y = 2)}
 }
