@@ -72,6 +72,7 @@ pred init{
         -- passenger begins at requested location
         p.locationx = p.request.origin_x
         p.locationy = p.request.origin_y
+
     }
         -- people relatively spread on board --> not sure how to do this yet
 }
@@ -271,16 +272,40 @@ pred stayStill[d: Driver]{
     }
 }
 
+pred claimingEnabled[d:Driver, p: Passenger]{
+    p.request.claimed = 0
+    p.request.fulfilled = 0
+    d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
+    p.request not in d.accepted_requests
+}
+
+pred claiming[d: Driver, p: Passenger]{
+    claimingEnabled[d, p]
+
+    p.request.claimed' = 1
+    p.request.fulfilled' = p.request.fulfilled
+
+    p.request in d.accepted_requests'
+
+    -- driver should stay the same
+    d.location_x' = d.location_x
+    d.location_y' = d.location_y
+    d.passengers_in_car' = d.passengers_in_car
+    
+}
+
 pred pickUpEnabled[d: Driver, p: Passenger] {
      // if a driver is in the same cell as a passenger
     // and they are sharing a request of some sort (don't have have to worry about this for now)
     d.location_x = p.request.origin_x
     d.location_y = p.request.origin_y
-    p.request.claimed = 0
-    p.request.fulfilled = 0
+
+    p.request in d.accepted_requests
+    p.request.claimed = 1
+   
     //capacity is greater than number of passengers in car + party size
-    d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
-    p.request not in d.accepted_requests
+    // d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
+    // p.request not in d.accepted_requests
 }
 
 pred pickUp[d: Driver, p: Passenger] {
@@ -295,11 +320,15 @@ pred pickUp[d: Driver, p: Passenger] {
     // passenger added to driver' passengers
     p in d.passengers_in_car'
 
+    d.accepted_requests' = d.accepted_requests
+
     // request doesn't rly change
-    p.request.claimed' = 1
+    p.request.claimed' = p.request.claimed
     p.request.fulfilled' = p.request.fulfilled
 
-    p.request in d.accepted_requests'  
+    // p.request in d.accepted_requests'
+    
+    
 }
 
 //maybe doesnt need passenger
@@ -327,7 +356,7 @@ pred dropOff[d: Driver, p: Passenger] {
 
     //passenger no longer in driver' passengers
     d.passengers_in_car' = d.passengers_in_car - p
-
+    d.accepted_requests' = d.accepted_requests - p.request
     
 }
 
@@ -362,7 +391,7 @@ pred traces {
     always wellformed
     init --maybe
     all d: Driver| some p: Passenger | {
-        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p] or stayStill[d]}
+        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p] or claiming[d,p] or stayStill[d]}
         eventually{pickUp[d,p]}
         eventually{dropOff[d,p]}
         always pickUpCurIfRequesting[d,p]
