@@ -24,8 +24,8 @@ sig Passenger {
 sig Driver {
     capacity: one Int,
     var accepted_requests: set Request,
-    var location_x: lone Int,
-    var location_y: lone Int,
+    var location_x: one Int,
+    var location_y: one Int,
     var passengers_in_car: set Passenger
 }
 
@@ -52,6 +52,14 @@ pred wellformed_map {
     }
   }
 
+   // This says that there must be exactly one row-col pair that the driver is at
+  all d: Driver | {
+    one row, col: Int | {
+        Board.pos_driver[row][col] = d
+    }
+  }
+
+  // This further says that this must correspond to location_x and location_y
   all d: Driver | {
     one row, col: Int | {
         Board.pos_driver[row][col] = d
@@ -160,8 +168,9 @@ pred wellformed{
                 d.capacity >= 0
 
                  -- ensure not more passengers than capacity
-                 #{d.passengers_in_car} <= d.capacity //might not need this later     
+                  
             }
+            #{d.passengers_in_car} <= d.capacity //might not need this later  
             
         }
 
@@ -412,7 +421,7 @@ pred traces {
 
 run{
     traces
-} for exactly 2 Driver, exactly 2 Passenger
+} for exactly 4 Driver, exactly 4 Passenger
 
 // 0 0 0
 // 0 X 0
