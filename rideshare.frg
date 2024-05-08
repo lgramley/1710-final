@@ -24,8 +24,8 @@ sig Passenger {
 sig Driver {
     capacity: one Int,
     var accepted_requests: set Request,
-    var location_x: lone Int,
-    var location_y: lone Int,
+    var location_x: one Int,
+    var location_y: one Int,
     var passengers_in_car: set Passenger
 }
 
@@ -52,6 +52,14 @@ pred wellformed_map {
     }
   }
 
+   // This says that there must be exactly one row-col pair that the driver is at
+  all d: Driver | {
+    one row, col: Int | {
+        Board.pos_driver[row][col] = d
+    }
+  }
+
+  // This further says that this must correspond to location_x and location_y
   all d: Driver | {
     one row, col: Int | {
         Board.pos_driver[row][col] = d
@@ -78,14 +86,11 @@ pred init{
 
     all d: Driver, p: Passenger | {
         one row, col: Int | {
-        (row >= 0) and (row <= 4)
-        (col >= 0) and (col <= 2)
-        d.location_x = row
-        d.location_y = col
-        
+            (row >= 0) and (row <= 4)
+            (col >= 0) and (col <= 2)
+            d.location_x = row
+            d.location_y = col
         }
-
-
         --passenger logic
         p.request.fulfilled = 0
         p.request.claimed = 0
@@ -154,8 +159,9 @@ pred wellformed{
                 d.capacity >= 0
 
                  -- ensure not more passengers than capacity
-                 #{d.passengers_in_car} <= d.capacity //might not need this later     
+                  
             }
+            #{d.passengers_in_car} <= d.capacity //might not need this later  
             
         }
 
@@ -401,9 +407,9 @@ pred traces {
     }
 }
 
-// run{
-//     traces
-// } for exactly 2 Driver, exactly 2 Passenger
+run{
+    traces
+} for exactly 4 Driver, exactly 4 Passenger
 
 //0 0 0 0 0 
 //0 X 0 X 0
@@ -437,7 +443,7 @@ pred procedure3[d: Driver, p: Passenger]{
     no p.request iff stayStill[d]
 
     d.location_x' = add[d.location_x, 1] => moveRight[d] until d.location_x = 4
-    d.locatoin_x' = subtract[d.location_y, 1] => moveLeft[d] until d.location_x = 0
+    d.location_x' = subtract[d.location_y, 1] => moveLeft[d] until d.location_x = 0
     d.location_y' = add[d.location_y, 1] => moveUp[d] until d.location_y = 2
     d.location_y' = subtract[d.location_y, 1] => moveDown[d] until d.location_y = 0
 }
