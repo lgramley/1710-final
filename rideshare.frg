@@ -18,7 +18,9 @@ sig Request {
 }
 
 sig Passenger {
-    request: one Request
+    request: one Request,
+    var locationx: one Int,
+    var locationy: one Int
 }
 
 sig Driver {
@@ -34,46 +36,10 @@ one sig RequestsList{
     var all_requests: set Request
 }
 
-one sig Board {
-    var pos_driver : pfunc Int -> Int -> Driver, // (int, int) -> thing
-    var pos_pass : pfunc Int -> Int -> Passenger
-}
 
-pred wellformed_map {
-  // Fill in this predicate to ensure that:
-  // The board is 5x3, so Int ranges from 0-4 and 0-2
-
--- BLOCK out middle squares (1, 1) and (3, 1)
-
-  all row, col: Int | {
-    (row < 0 or row > 4 or col < 0 or col > 2 or (row = 1 and col = 1) or (row = 3 and col = 1)) implies {
-        no Board.pos_driver[row][col]
-        no Board.pos_pass[row][col]
-    }
-  }
-
-   // This says that there must be exactly one row-col pair that the driver is at
-  all d: Driver | {
-    one row, col: Int | {
-        Board.pos_driver[row][col] = d
-    }
-  }
-
-  // This further says that this must correspond to location_x and location_y
-  all d: Driver | {
-    one row, col: Int | {
-        Board.pos_driver[row][col] = d
-        d.location_x = row
-        d.location_y = col
-    }
-  }
-
-  all p: Passenger | {
-    one row, col: Int | {
-        Board.pos_pass[row][col] = p
-    }
-  }
-} 
+//Todo:
+-- GOAL: car moves in a direction (ideally towards a passenger)
+-- start with one car and passenger and then build up to a whole network of cars and passengers
 
 //init: (initial state)
 -- Passengers and Cars relatively spread out across the board
@@ -101,10 +67,11 @@ pred init{
 
         -- no passengers in cars to begin with
         p not in d.passengers_in_car
-    
 
+        p.request not in d.accepted_requests
         -- passenger begins at requested location
-        Board.pos_pass[p.request.origin_x][p.request.origin_y] = p
+        p.locationx = p.request.origin_x
+        p.locationy = p.request.origin_y
     }
         -- people relatively spread on board --> not sure how to do this yet
 }
@@ -148,21 +115,11 @@ pred wellformed{
         }
 
         all d: Driver | {
-            one r, c: Int | {
-                (r >= 0) and (r <= 4)
-                (c >= 0) and (c <= 2)
+            -- can probably do this in a better way
+            d.capacity <= 4 //exclude driver in capacity to avoid math
+            d.capacity >= 0
 
-                d.location_x = r
-                d.location_y = c
-
-                d.capacity <= 4 //exclude driver in capacity to avoid math
-                d.capacity >= 0
-
-                 -- ensure not more passengers than capacity
-                  
-            }
-            #{d.passengers_in_car} <= d.capacity //might not need this later  
-            
+            -- ensure not more passengers than capacity
         }
 
         all disj d1, d2: Driver |{
@@ -175,8 +132,8 @@ pred wellformed{
             // if they are not in a car, they cannot move
             some d: Driver | p not in d.passengers_in_car implies {
                 some x, y: Int | {
-                    (Board.pos_pass[x][y])' = Board.pos_pass[x][y]
-                    Board.pos_pass[x][y] = p
+                    p.locationx' = p.locationx
+                    p.locationy' = p.locationy
                 }
             }         
         }
@@ -204,7 +161,7 @@ pred moveRight[d: Driver]{
     -- next position needs to be row same, location_y + 1
     d.location_y' = d.location_y
     d.location_x' = add[d.location_x,1]
-    (Board.pos_driver[d.location_x][d.location_y])' = d
+ 
 
     -- everything else stays the same
    
@@ -212,7 +169,8 @@ pred moveRight[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
     -- 
     all p: d.passengers_in_car | {
-        (Board.pos_pass[d.location_x][d.location_y])' = p
+        p.locationy' = p.locationy
+        p.locationx' = add[p.locationx,1]
     
     }
     requestsStaySame
@@ -232,7 +190,7 @@ pred moveLeft[d: Driver]{
     -- next position needs to be row same, location_y + 1
     d.location_y' = d.location_y
     d.location_x' = subtract[d.location_x,1]
-    (Board.pos_driver[d.location_x][d.location_y])' = d
+    
 
     -- everything else stays the same
 
@@ -240,14 +198,15 @@ pred moveLeft[d: Driver]{
     d.passengers_in_car' = d.passengers_in_car
 
     all p: d.passengers_in_car | {
-       (Board.pos_pass[d.location_x][d.location_y])' = p
+        p.locationy' = p.locationy
+        p.locationx' = subtract[p.locationx,1]
     }
     requestsStaySame
 }
 
 pred moveUpEnabled[d: Driver]{
     not{d.location_y = 2 //can't move up if on edge
-    or (d.location_x = 1 and d.location_y != 0)
+    or (d.location_x = 1 and d.location_y = 0)
     or (d.location_x = 3 and d.location_y = 0)}
 }
 
@@ -258,13 +217,13 @@ pred moveUp[d: Driver]{
     -- next position needs to be row same, location_y + 1
     d.location_y' = add[d.location_y,1]
     d.location_x' = d.location_x
-    (Board.pos_driver[d.location_x][d.location_y])' = d
     -- everything else stays the same
     
     d.accepted_requests' = d.accepted_requests
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
-        (Board.pos_pass[d.location_x][d.location_y])' = p
+        p.locationy' = add[p.locationy,1]
+        p.locationx' = p.locationx
     }
 
     requestsStaySame
@@ -283,12 +242,13 @@ pred moveDown[d: Driver]{
     -- next position needs to be row same, location_y + 1
     d.location_y' = subtract[d.location_y, 1]
     d.location_x' = d.location_x
-    (Board.pos_driver[d.location_x][d.location_y])' = d
+   
     -- everything else stays the same
     d.accepted_requests' = d.accepted_requests
     d.passengers_in_car' = d.passengers_in_car
     all p: d.passengers_in_car | {
-        (Board.pos_pass[d.location_x][d.location_y])' = p
+        p.locationy' = subtract[p.locationy, 1]
+        p.locationx' = p.locationx
     }
 
     requestsStaySame
@@ -302,12 +262,12 @@ pred stayStill[d: Driver]{
     -- everything stays the same:
     d.accepted_requests' = d.accepted_requests
     d.passengers_in_car' = d.passengers_in_car
-    all x, y: Int {
-        (Board.pos_driver[x][y])' = Board.pos_driver[x][y]
-        (Board.pos_pass[x][y])' = Board.pos_pass[x][y]
-    }
-
+    
     requestsStaySame
+    all p: Passenger |{
+        p.locationx' = p.locationx
+        p.locationy' = p.locationy
+    }
 }
 
 pred pickUpEnabled[d: Driver, p: Passenger] {
@@ -329,6 +289,8 @@ pred pickUp[d: Driver, p: Passenger] {
     d.location_x' = d.location_x
     d.location_y' = d.location_y
 
+    p.locationx' = p.locationx
+    p.locationy' = p.locationy
     // passenger added to driver' passengers
     p in d.passengers_in_car'
 
@@ -338,7 +300,7 @@ pred pickUp[d: Driver, p: Passenger] {
 
     p.request in d.accepted_requests'
     
-    (Board.pos_pass[p.request.origin_x][p.request.origin_y])' = p
+    
 }
 
 //maybe doesnt need passenger
@@ -356,6 +318,9 @@ pred dropOff[d: Driver, p: Passenger] {
     d.location_x' = d.location_x
     d.location_y' = d.location_y
 
+    p.locationx' = p.locationx
+    p.locationy' = p.locationy
+
     p.request.fulfilled' = 1
     // claimed goes back to 0 i guess
 
@@ -364,7 +329,7 @@ pred dropOff[d: Driver, p: Passenger] {
     //passenger no longer in driver' passengers
     d.passengers_in_car' = d.passengers_in_car - p
 
-    (Board.pos_pass[p.request.destination_x][p.request.destination_y])' = p
+    
 }
 
 //actions:
@@ -395,7 +360,6 @@ pred dropOffCurIfRequesting[d: Driver, p: Passenger] {
 }
 
 pred traces {
-    always wellformed_map
     always wellformed
     init --maybe
     all d: Driver| some p: Passenger | {
@@ -409,7 +373,7 @@ pred traces {
 
 run{
     traces
-} for exactly 4 Driver, exactly 4 Passenger
+} for exactly 1 Driver, exactly 1 Passenger
 
 //0 0 0 0 0 
 //0 X 0 X 0
@@ -447,16 +411,3 @@ pred procedure3[d: Driver, p: Passenger]{
     d.location_y' = add[d.location_y, 1] => moveUp[d] until d.location_y = 2
     d.location_y' = subtract[d.location_y, 1] => moveDown[d] until d.location_y = 0
 }
-
-//closer passenger??
-// pred procedure4[d: Driver, p1, p2: Passenger]{
-//     no p.request iff stayStill[d]
-//     //not actually totally sure how to enforce this...
-// }
-
-// run{
-//     traces
-//     all d: Driver| some p: Passenger | {
-//         procedure1[d,p]
-//     }
-// } for exactly 1 Driver, exactly 1 Passenger
