@@ -1,10 +1,10 @@
 #lang forge/temporal
 option max_tracelength 25
 option min_tracelength 6
-// option solver MiniSatProver
-// option core_minimization rce
-// option logtranslation 1
-// option coregranularity 1
+option solver MiniSatProver
+option core_minimization rce
+option logtranslation 1
+option coregranularity 1
 
 --Sigs--
 sig Request {
@@ -68,7 +68,7 @@ pred init{
         -- no passengers in cars to begin with
         p not in d.passengers_in_car
 
-        p.request not in d.accepted_requests
+        p.request not in d.accepted_requests 
         -- passenger begins at requested location
         p.locationx = p.request.origin_x
         p.locationy = p.request.origin_y
@@ -123,10 +123,10 @@ pred wellformed{
             -- ensure not more passengers than capacity
         }
 
-        all disj d1, d2: Driver |{
-            d1.accepted_requests not in d2.accepted_requests
-            d2.accepted_requests not in d1.accepted_requests
+        all disj d1, d2: Driver | {
+            (d1.accepted_requests not in d2.accepted_requests and d2.accepted_requests not in d1.accepted_requests) or no d1.accepted_requests or no d2.accepted_requests
         }
+
 
         --passenger should stay still unless picked up by driver!
         all p: Passenger | {
@@ -136,7 +136,11 @@ pred wellformed{
                     p.locationx' = p.locationx
                     p.locationy' = p.locationy
                 }
-            }         
+            }   
+            all p2:Passenger | p != p2 =>{
+                p.request != p2.request
+
+            }      
         }
 }
 
@@ -355,7 +359,9 @@ pred dropOff[d: Driver, p: Passenger] {
     //passenger no longer in driver' passengers
     d.passengers_in_car' = d.passengers_in_car - p
     d.accepted_requests' = d.accepted_requests - p.request
-    
+
+    //add specfic guards around unclaimed/unfulfilled requests remaining unchanged
+
 }
 
 //actions:
@@ -376,7 +382,9 @@ pred dropOff[d: Driver, p: Passenger] {
 
 //traces: 
 --reasonable pick up and drop off logic
-
+pred acceptIfRequesting[d: Driver, p: Passenger]{
+    claimingEnabled[d,p] => claiming[d,p]
+}
 pred pickUpCurIfRequesting[d: Driver, p: Passenger] {
 	pickUpEnabled[d,p] => pickUp[d,p]
 }
@@ -389,12 +397,18 @@ pred traces {
     always wellformed
     init --maybe
     all d: Driver| some p: Passenger | {
-        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or stayStill[d] or claiming[d,p] or dropOff[d,p]}
+        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or claiming[d,p] or stayStill[d] or pickUp[d,p] or dropOff[d,p]}
+        //eventually{claiming[d,p]}
         //eventually{pickUp[d,p]}
         eventually{dropOff[d,p]}
+        //always acceptIfRequesting[d,p]
         //always pickUpCurIfRequesting[d,p]
         always dropOffCurIfRequesting[d,p]
     }
+
+    //add some protection that all passengers eventually get to their destination. we can't use an all quantifier in the above statement bc not all
+    // drivers should nor can interact with all passengers. so maybe some guard that all passengers location will equal their destination at some point.
+    //idk 
 
 
     
@@ -402,7 +416,7 @@ pred traces {
 
 run{
     traces
-} for exactly 1 Driver, exactly 1 Passenger
+} for exactly 2 Driver, exactly 2 Passenger
 
 //0 0 0 0 0 
 //0 X 0 X 0
