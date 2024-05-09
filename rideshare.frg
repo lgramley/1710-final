@@ -91,7 +91,7 @@ pred wellformed{
 
         --requets all tied to a passenger
         all r: Request {
-            some p: Passenger, d: Driver | {
+            some p: Passenger | {
                 p.request = r
             }
             r.party_size >= 0
@@ -173,7 +173,6 @@ pred moveRight[d: Driver]{
     all p: d.passengers_in_car | {
         p.locationy' = p.locationy
         p.locationx' = add[p.locationx,1]
-    
     }
     requestsStaySame
 }
@@ -302,9 +301,9 @@ pred pickUpEnabled[d: Driver, p: Passenger] {
 
     p.request in d.accepted_requests
     p.request.claimed = 1
-   
+
     //capacity is greater than number of passengers in car + party size
-    // d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
+    //d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
     // p.request not in d.accepted_requests
 }
 
@@ -312,6 +311,7 @@ pred pickUp[d: Driver, p: Passenger] {
     pickUpEnabled[d,p]
 
     // driver location stays still during pick up 
+    requestsStaySame
     d.location_x' = d.location_x
     d.location_y' = d.location_y
 
@@ -323,11 +323,9 @@ pred pickUp[d: Driver, p: Passenger] {
     d.accepted_requests' = d.accepted_requests
 
     // request doesn't rly change
-    p.request.claimed' = p.request.claimed
-    p.request.fulfilled' = p.request.fulfilled
-
-    // p.request in d.accepted_requests'
     
+
+
     
 }
 
@@ -391,12 +389,13 @@ pred traces {
     always wellformed
     init --maybe
     all d: Driver| some p: Passenger | {
-        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or dropOff[d,p] or claiming[d,p] or stayStill[d]}
-        eventually{pickUp[d,p]}
+        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or pickUp[d,p] or stayStill[d] or claiming[d,p] or dropOff[d,p]}
+        //eventually{pickUp[d,p]}
         eventually{dropOff[d,p]}
-        always pickUpCurIfRequesting[d,p]
+        //always pickUpCurIfRequesting[d,p]
         always dropOffCurIfRequesting[d,p]
     }
+
 
     
 }
