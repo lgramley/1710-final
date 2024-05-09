@@ -1,10 +1,10 @@
 #lang forge/temporal
 option max_tracelength 25
-//option min_tracelength 10
-option solver MiniSatProver
-option core_minimization rce
-option logtranslation 1
-option coregranularity 1
+option min_tracelength 6
+// option solver MiniSatProver
+// option core_minimization rce
+// option logtranslation 1
+// option coregranularity 1
 
 --Sigs--
 sig Request {
@@ -130,7 +130,6 @@ pred wellformed{
 
         --passenger should stay still unless picked up by driver!
         all p: Passenger | {
-            
             // if they are not in a car, they cannot move
             some d: Driver | p not in d.passengers_in_car implies {
                 some x, y: Int | {
@@ -206,6 +205,7 @@ pred moveLeft[d: Driver]{
 }
 
 pred moveUpEnabled[d: Driver]{
+
     not{d.location_y >= 2 //can't move up if on edge
     or (d.location_x = 1 and d.location_y = 0)
     or (d.location_x = 3 and d.location_y = 0)}
@@ -404,13 +404,39 @@ run{
     traces
 } for exactly 1 Driver, exactly 1 Passenger
 
-// 0 0 0
-// 0 X 0
-// 0 0 0
-// 0 X 0
-// 0 0 0
+//0 0 0 0 0 
+//0 X 0 X 0
+//0 0 0 0 0 
 
 //procedures
 //Tests!
 //write up
 //visualizer?
+
+//left right enforcers
+pred procedure1[d: Driver, p: Passenger]{
+    no p.request iff stayStill[d]
+    always pickUpCurIfRequesting[d,p]
+
+    d.location_x > p.request.origin_x => moveLeft[d]
+    d.location_x < p.request.origin_x => moveRight[d]
+}
+
+//up down enforcers (not sure how well procedures 1 and 2 would work together)
+pred procedure2[d: Driver, p: Passenger]{
+    no p.request iff stayStill[d]
+    always pickUpCurIfRequesting[d,p]
+
+    d.location_y > p.request.origin_y => moveDown[d]
+    d.location_y < p.request.origin_y => moveUp[d]
+}
+
+//no turnaround
+pred procedure3[d: Driver, p: Passenger]{
+    no p.request iff stayStill[d]
+
+    d.location_x' = add[d.location_x, 1] => moveRight[d] until d.location_x = 4
+    d.location_x' = subtract[d.location_y, 1] => moveLeft[d] until d.location_x = 0
+    d.location_y' = add[d.location_y, 1] => moveUp[d] until d.location_y = 2
+    d.location_y' = subtract[d.location_y, 1] => moveDown[d] until d.location_y = 0
+}
