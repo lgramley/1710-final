@@ -1,10 +1,10 @@
 #lang forge/temporal
 option max_tracelength 25
 option min_tracelength 6
-option solver MiniSatProver
-option core_minimization rce
-option logtranslation 1
-option coregranularity 1
+// option solver MiniSatProver
+// option core_minimization rce
+// option logtranslation 1
+// option coregranularity 1
 
 --Sigs--
 sig Request {

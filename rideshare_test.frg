@@ -6,6 +6,7 @@ open "rideshare.frg"
 //liveness and soundness/safety with different procedures
 //examples
 
+//below passes through next indicating comment -- commented out to run tests faster hopefully
 pred loc_y_up[d: Driver]{
     d.location_y <= 2 
 }
@@ -159,22 +160,57 @@ test suite for moveLeft{
 
 
 //pick up
+//picked up (and also NOT dropped off)
 pred pickedUp[d: Driver, p: Passenger]{
     p in d.passengers_in_car
     p.request in d.accepted_requests'
 }
 
+//not picked up 
 pred notPickedUp[d: Driver, p: Passenger]{
     p not in d.passengers_in_car
-    p.request not in d.accepted_requests
+    p.request not in d.accepted_requests'
+}
+
+//dropped off
+pred droppedOff[d: Driver, p: Passenger]{
+    d.passengers_in_car' = d.passengers_in_car - p
+    d.accepted_requests' = d.accepted_requests - p.request
 }
 
 test suite for pickUp{
     test expect{
-        // pickedup: {some d: Driver, p: Passenger | pickedUp[d, p] and pickUp[d, p] and wellformed} is sat
-        // notpickedup: {some d: Driver, p: Passenger | notPickedUp[d,p] and pickUp[d,p]} is unsat
+        pickedup: {some d: Driver, p: Passenger | pickedUp[d, p] and pickUp[d, p] and wellformed} is sat
+        notpickedup: {some d: Driver, p: Passenger | droppedOff[d,p] and pickUp[d,p]} is unsat
     }
 }
 
-
 //drop off
+test suite for dropOff{
+    test expect{
+        notdroppedoff: {some d: Driver, p: Passenger | pickedUp[d, p] and dropOff[d, p] and wellformed} is unsat
+        droppedoff: {some d: Driver, p: Passenger | droppedOff[d, p] and dropOff[d,p] and wellformed} is sat
+    }
+}
+//all tests pass through dropOff test suite
+
+//some combos of actions...see stacks
+
+// pred unclaimed[p: Passenger]{
+//     p.request.claimed = 0
+// }
+
+// pred claimed[p: Passenger]{
+//     p.request.claimed = 1
+// }
+
+// pred route1[d: Driver, p: Passenger]{
+//     pickUp[d, p]
+//     moveLeft[d]
+//     dropOff[d, p]
+// }
+
+// assert all d: Driver, p: Passenger | unclaimed[p] is necessary for route1[d, p]
+
+
+//also add more to pick up and drop off
