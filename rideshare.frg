@@ -3,10 +3,10 @@ option run_sterling "vis.js"
 
 option max_tracelength 25
 option min_tracelength 6
-option solver MiniSatProver
-option core_minimization rce
-option logtranslation 1
-option coregranularity 1
+// option solver MiniSatProver
+// option core_minimization rce
+// option logtranslation 1
+// option coregranularity 1
 
 --Sigs--
 sig Request {
@@ -435,9 +435,9 @@ pred traces {
     
 }
 
-run{
-    traces
-} for exactly 1 Driver, exactly 2 Passenger
+// run{
+//     traces
+// } for exactly 1 Driver, exactly 2 Passenger
 
 //0 0 0 0 0 
 //0 X 0 X 0
@@ -451,7 +451,7 @@ run{
 //left right enforcers
 pred procedure1[d: Driver, p: Passenger]{
     no p.request iff stayStill[d]
-    always pickUpCurIfRequesting[d,p]
+    
 
     d.location_x > p.request.origin_x => moveLeft[d]
     d.location_x < p.request.origin_x => moveRight[d]
@@ -460,7 +460,6 @@ pred procedure1[d: Driver, p: Passenger]{
 //up down enforcers (not sure how well procedures 1 and 2 would work together)
 pred procedure2[d: Driver, p: Passenger]{
     no p.request iff stayStill[d]
-    always pickUpCurIfRequesting[d,p]
 
     d.location_y > p.request.origin_y => moveDown[d]
     d.location_y < p.request.origin_y => moveUp[d]
@@ -475,3 +474,34 @@ pred procedure3[d: Driver, p: Passenger]{
     d.location_y' = add[d.location_y, 1] => moveUp[d] until d.location_y = 2
     d.location_y' = subtract[d.location_y, 1] => moveDown[d] until d.location_y = 0
 }
+
+pred procedure4[d: Driver, p:Passenger]{
+    no p.request iff stayStill[d]
+    {(subtract[d.location_x, p.locationx] = 1 or subtract[p.locationx, d.location_x] = 1) and (subtract[d.location_y, p.locationy] = 1 or subtract[p.locationy, d.location_y] = 1)} => claiming[d,p]
+}
+
+pred traces2{
+    always wellformed
+    init --maybe
+    all d: Driver| some p: Passenger |{
+        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or claiming[d,p] or stayStill[d] or pickUp[d,p] or dropOff[d,p]}
+        
+        eventually{dropOff[d,p]}
+       
+        // always dropOffCurIfRequesting[d,p]
+    }
+}
+//claiming if its outside 2 blocks
+pred procedure5[d: Driver, p:Passenger]{
+    no p.request iff stayStill[d]
+    {subtract[d.location_x, p.locationx] >= 2 or subtract[p.locationx, d.location_x] >= 2 or subtract[d.location_y, p.locationy] >= 2 or subtract[p.locationy, d.location_y] >= 2} iff claimingEnabled[d,p] //else not claiming[d,p]
+}
+
+run{
+    traces2
+    always eventually{
+    all d: Driver| some p: Passenger | {
+        procedure5[d,p]
+    }
+    }
+} for exactly 1 Driver, 1 Passenger

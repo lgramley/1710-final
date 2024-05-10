@@ -6,6 +6,66 @@ open "rideshare.frg"
 //liveness and soundness/safety with different procedures
 //examples
 
+pred wellformed_request{
+    some r: Request {
+        r.party_size >= 0
+        r.party_size <= 4
+
+        r.origin_x >= 0
+        r.origin_y >= 0
+        r.origin_x <= 4
+        r.origin_y <= 2
+        r.destination_x >= 0
+        r.destination_y >= 0
+        r.destination_x <= 4
+        r.destination_y <= 2
+
+
+        (r.origin_x = r.destination_x) implies{
+            r.origin_y != r.destination_y
+            }
+
+        r in RequestsList.all_requests
+        }
+}
+
+pred illformed_request{
+    some r: Request {
+        r.party_size >= 0
+        r.party_size <= 4
+
+        r.origin_x <= 0
+        r.origin_y <= 0
+        r.origin_x >= 4
+        r.origin_y >= 2
+        r.destination_x >= 0
+        r.destination_y >= 0
+        r.destination_x <= 4
+        r.destination_y <= 2
+    }
+}
+
+pred wellformed_driver{
+    all d: Driver | {
+        d.capacity <= 4 
+        d.capacity >= 0
+    }
+}
+
+pred illformed_driver{
+    some d: Driver | {
+        d.capacity = 6
+    }
+}
+test suite for wellformed{
+    test expect{
+        good_req:{wellformed_request and wellformed} is sat
+        bad_req:{illformed_request and wellformed} is unsat
+        good_driv:{wellformed_driver and wellformed} is sat
+        bad_driv:{illformed_driver and wellformed} is unsat
+    }
+}
+
 //below passes through next indicating comment -- commented out to run tests faster hopefully
 pred loc_y_up[d: Driver]{
     d.location_y <= 2 
@@ -196,23 +256,6 @@ test suite for dropOff{
 
 //some combos of actions...see stacks
 
-// pred unclaimed[p: Passenger]{
-//     p.request.claimed = 0
-// }
-
-// pred claimed[p: Passenger]{
-//     p.request.claimed = 1
-// }
-
-// pred route1[d: Driver, p: Passenger]{
-//     pickUp[d, p]
-//     moveLeft[d]
-//     dropOff[d, p]
-// }
-
-// assert all d: Driver, p: Passenger | unclaimed[p] is necessary for route1[d, p]
-
-
 //also add more to pick up and drop off
 
 //liveness
@@ -220,9 +263,7 @@ test suite for dropOff{
 pred liveness[d: Driver] {
 	always {
 		all p: Passenger | {
-            //want to say that a passenger with a request will eventually be claimed... I think there a number of ways to say this (claimed, fulfilled, accepted requests etc. )
             (p.request in RequestsList.all_requests) => eventually (p.request in d.accepted_requests)
-			// (r in e.requests) => eventually (not r in e.requests) //not totally sure if the above translates exactly
 		}
 	}
 }
@@ -244,7 +285,9 @@ pred safety[d: Driver, p: Passenger] {
 //liveness and safety of procedures??
 
 test expect{
-    proc_1 {some d: Driver, p: Passneger | procedure1[d, p] and liveness[d] and safety[d]} is sat
-    proc_2: {some d: Driver, p: Passneger | procedure2[d, p] and liveness[d] and safety[d]} is sat
-    proc_3: {some d: Driver, p: Passneger | procedure3[d, p] and liveness[d] and safety[d]} is sat
+    proc_1: {some d: Driver, p: Passenger | procedure1[d, p] and liveness[d] and safety[d, p]} is sat
+    proc_2: {some d: Driver, p: Passenger | procedure2[d, p] and liveness[d] and safety[d, p]} is sat
+    proc_3: {some d: Driver, p: Passenger | procedure3[d, p] and liveness[d] and safety[d, p]} is sat
+    proc_4: {some d: Driver, p: Passenger | procedure4[d, p] and liveness[d] and safety[d, p]} is sat
+    proc_5: {some d: Driver, p: Passenger | procedure5[d, p] and liveness[d] and safety[d, p]} is sat
 }
