@@ -308,7 +308,7 @@ pred pickUpEnabled[d: Driver, p: Passenger] {
 
     //capacity is greater than number of passengers in car + party size
     //d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
-    // p.request not in d.accepted_requests
+    //p.request not in d.accepted_requests
 }
 
 pred pickUp[d: Driver, p: Passenger] {

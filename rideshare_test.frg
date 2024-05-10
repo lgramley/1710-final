@@ -214,3 +214,37 @@ test suite for dropOff{
 
 
 //also add more to pick up and drop off
+
+//liveness
+//soundness/safety
+pred liveness[d: Driver] {
+	always {
+		all p: Passenger | {
+            //want to say that a passenger with a request will eventually be claimed... I think there a number of ways to say this (claimed, fulfilled, accepted requests etc. )
+            (p.request in RequestsList.all_requests) => eventually (p.request in d.accepted_requests)
+			// (r in e.requests) => eventually (not r in e.requests) //not totally sure if the above translates exactly
+		}
+	}
+}
+
+pred enabled[d: Driver, p: Passenger] {
+    pickUpEnabled[d, p] or 
+    moveLeftEnabled[d] or
+    moveRightEnabled[d] or
+    moveUpEnabled[d] or
+    moveDownEnabled[d]
+}
+
+// Property: Safety, or the fact that the elevator can always become enabled (no deadlock)
+// This property holds for procedures 1, 2, 3, 4, and 5
+pred safety[d: Driver, p: Passenger] {
+	always eventually enabled[d,p]
+}
+
+//liveness and safety of procedures??
+
+test expect{
+    proc_1 {some d: Driver, p: Passneger | procedure1[d, p] and liveness[d] and safety[d]} is sat
+    proc_2: {some d: Driver, p: Passneger | procedure2[d, p] and liveness[d] and safety[d]} is sat
+    proc_3: {some d: Driver, p: Passneger | procedure3[d, p] and liveness[d] and safety[d]} is sat
+}
