@@ -284,7 +284,8 @@ pred claimingEnabled[d:Driver, p: Passenger]{
 }
 
 pred claiming[d: Driver, p: Passenger]{
-    
+    claimingEnabled[d, p]
+
     p.request.claimed' = 1
     p.request.fulfilled' = p.request.fulfilled
 
@@ -294,12 +295,6 @@ pred claiming[d: Driver, p: Passenger]{
     d.location_x' = d.location_x
     d.location_y' = d.location_y
     d.passengers_in_car' = d.passengers_in_car
-    all r: Request |{
-        r != p.request => {
-            r.fulfilled' = r.fulfilled
-            r.claimed' = r.claimed
-        }
-    }
     
 }
 
@@ -311,10 +306,6 @@ pred pickUpEnabled[d: Driver, p: Passenger] {
 
     p.request in d.accepted_requests
     p.request.claimed = 1
-
-    //capacity is greater than number of passengers in car + party size
-    //d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
-    // p.request not in d.accepted_requests
 }
 
 pred pickUp[d: Driver, p: Passenger] {
@@ -365,14 +356,6 @@ pred dropOff[d: Driver, p: Passenger] {
     //passenger no longer in driver' passengers
     d.passengers_in_car' = d.passengers_in_car - p
     d.accepted_requests' = d.accepted_requests - p.request
-
-    //add specfic guards around unclaimed/unfulfilled requests remaining unchanged
-    all r: Request |{
-        r != p.request => {
-            r.fulfilled' = r.fulfilled
-            r.claimed' = r.claimed
-        }
-    }
 }
 
 //actions:
@@ -404,40 +387,24 @@ pred dropOffCurIfRequesting[d: Driver, p: Passenger] {
     dropOffEnabled[d,p] => dropOff[d,p]
 }
 
-pred allRequestsFulfilled{
-    all r : Request | {
-        r.fulfilled = 1
-    }
-}
 
 pred traces {
     always wellformed
     init --maybe
-    all d: Driver| some p: Passenger |{
+    all d: Driver| some p: Passenger | {
         always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or claiming[d,p] or stayStill[d] or pickUp[d,p] or dropOff[d,p]}
-        //eventually{claiming[d,p]}
-        //eventually{pickUp[d,p]}
+
         eventually{dropOff[d,p]}
-        //always acceptIfRequesting[d,p]
-        //always pickUpCurIfRequesting[d,p]
-        always dropOffCurIfRequesting[d,p]
-    }
-    //always{ eventually {allRequestsFulfilled}}
-    // all p2: Passenger | some d:Driver |{
-    //     always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or claiming[d,p2] or stayStill[d] or pickUp[d,p2] or dropOff[d,p2]}
-
         
-    // }
-
-    //add some protection that all passengers eventually get to their destination. we can't use an all quantifier in the above statement bc not all
-    // drivers should nor can interact with all passengers. so maybe some guard that all passengers location will equal their destination at some point.
-    //idk 
+        always dropOffCurIfRequesting[d,p]
+        
+    }
     
 }
 
 run{
     traces
-} for exactly 1 Driver, exactly 2 Passenger
+} for exactly 2 Driver, exactly 2 Passenger
 
 //0 0 0 0 0 
 //0 X 0 X 0
