@@ -397,18 +397,7 @@ test expect{
 }
 
 test suite for traces {
-    // test expect {
-    //     passenger_in_two_cars_same_time: {
-    //        traces
-    //        some p: Passenger | {
-    //            some disj d1, d2: Driver | {
-    //                eventually { p in d1.passengers_in_car}
-    //                eventually { p in d2.passengers_in_car}
-    //            }
-              
-    //        }
-    //    } for exactly 2 Passenger, 2 Driver is unsat
-   test expect {
+    test expect {
         --ensures a passenger can only be in one car at once
         passenger_in_two_cars_same_time: {
            traces

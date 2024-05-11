@@ -37,19 +37,10 @@ one sig RequestsList{
     var all_requests: set Request
 }
 
-
-//Todo:
--- GOAL: car moves in a direction (ideally towards a passenger)
--- start with one car and passenger and then build up to a whole network of cars and passengers
-
 //init: (initial state)
 -- Passengers and Cars relatively spread out across the board
 pred init{
     --first iteration 
-
-    --location of car inside of driver
-    --no drivers on same tile as passenger for movement purposes    
-    -- cars at origin 
 
     all d: Driver, p: Passenger | {
         one row, col: Int | {
@@ -79,14 +70,6 @@ pred init{
 }
 
 //wellformed: (hold true for all states)
--- specify the board/grid/map
--- fill in the middle squares that cannot nothing will be on --> to make an 8
--- Car
--- requests
--- passengers, drivers
--- movement abilities
--- capactiy between 0 and 5 (5 just chosen arbitrarily)
-
 pred wellformed{
     --ALSO handle bounds of driver and passenger requets
 
@@ -138,16 +121,6 @@ pred wellformed{
                     p.locationy' = p.locationy
                 }
             }
-            //new------------ ensures passenger only in one car at a time
-            some disj d1, d2: Driver | p in d1.passengers_in_car implies{
-                    p not in d2.passengers_in_car
-            }
-
-            some d: Driver | p in d.passengers_in_car implies{
-                p.request in d.accepted_requests
-            }
-
-            //end new--------
 
             all p2:Passenger | p != p2 =>{
                 p.request != p2.request
@@ -338,11 +311,6 @@ pred pickUp[d: Driver, p: Passenger] {
     p in d.passengers_in_car'
 
     d.accepted_requests' = d.accepted_requests
-
-    // request doesn't rly change
-    
-
-
     
 }
 
@@ -374,21 +342,6 @@ pred dropOff[d: Driver, p: Passenger] {
     d.accepted_requests' = d.accepted_requests - p.request
 }
 
-//actions:
--- for every passenger if there request is being fulfilled they are in a car
--- passengers need to move with the car
--- when a car picks up a passenger, the passenger moves with the car
-
---move in a direction (up, down, left, right)
--- pick up a person (at location)
--- drop someone off (at location)
--- enabled
--- stay still/do nothing --> passenger does not move without a car
--- if there is a request driver should be moving towards it in its next state
-
---accepting request
- --p.request.party_size <= (d.car.capacity - #{d.car.passengers_in_car}) --> move to accepting request logic
-
 
 //traces: 
 --reasonable pick up and drop off logic
@@ -409,13 +362,9 @@ pred traces {
     init --maybe
     all d: Driver| some p: Passenger | {
         always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or claiming[d,p] or stayStill[d] or pickUp[d,p] or dropOff[d,p]}
-
         eventually{dropOff[d,p]}
-        
-        always dropOffCurIfRequesting[d,p]
-        
-    }
-    
+        always dropOffCurIfRequesting[d,p]    
+    } 
 }
 
 
@@ -423,15 +372,6 @@ run{
     traces
 } for exactly 2 Driver, exactly 2 Passenger
 
-
-//0 0 0 0 0 
-//0 X 0 X 0
-//0 0 0 0 0 
-
-//procedures
-//Tests!
-//write up
-//visualizer?
 
 //left right enforcers
 pred procedure1[d: Driver, p: Passenger]{
@@ -482,11 +422,6 @@ pred procedure5[d: Driver, p:Passenger]{
     claimingEnabled[d,p] iff {subtract[d.location_x, p.locationx] = 0 or subtract[p.locationx, d.location_x] = 0 or subtract[d.location_y, p.locationy] = 0 or subtract[p.locationy, d.location_y] = 0} //else not claiming[d,p]
 }
 
-// run{
-//     traces2
-//     always eventually{
-//     all d: Driver| some p: Passenger | {
-//         procedure5[d,p]
-//     }
-//     }
-// } for exactly 1 Driver, 1 Passenger
+//0 0 0 0 0 
+//0 X 0 X 0
+//0 0 0 0 0 
