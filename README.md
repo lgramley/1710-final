@@ -8,6 +8,7 @@ drastically increase the load on Forge as it would have to configure multiple
 combinations of tiles, for example, so we decided to simply store locations as 
 coordinates in the Passenger and Driver sig. Similarly, we initially had a Car 
 sig that we took out because it was irrelevant as Drivers can easily symbolize cars.
+
 - We initially wanted to model requests as being one large master list, and 
 drivers could accept depending on factors like capacity, location, etc. 
 As we were simplifying our model into the main Driver and Passenger sigs,
@@ -15,6 +16,7 @@ we decided to make Requests and Passengers more intertwined, so our mechanism
 for accepting requests is without the master list. As we ran into issues later,
 we realized that perhaps a master list would have been more successful to help 
 accommodate for multiple passengers. 
+
 - We focused only on drivers and passengers, did not include any stakeholders 
 beyond that. We were able to include all of the components we found relevant 
 in just these two stake holders which are represented in their
@@ -43,6 +45,7 @@ to have one driver accept and complete one request before taking on another. Thi
 was because of the way our different action choices were configured in our traces, 
 and it was possible for a given passenger to not follow constraints because the 
 predicates didn't apply to that *specific* passenger, or it would be unsat.
+
 - To follow the conceptual model of rideshare models, we also wanted to implement 
 passengers cancelling requests, but we realized that was not within our scope and 
 not super relevant to our overall goals like we intially thought. Similarly, 
@@ -51,9 +54,11 @@ others could not would have been difficult to achieve. However, the model does
 somewhat inherently handle this as we do account for party size. Addint a ratings 
 field also seemed irrelevant for our goals however should we wanted to implement 
 we could have just added it to our sigs. 
+
 - Our goals shifted to ensuring that requests worked and that you can claim and
 fulfill requests in a manner specified by different procedures. We prioritized 
 getting it to work so we can attempt different procedures.
+
 - Despite these challenges, our model certainly has some benefits even if they 
 are not totally applicable to real world systems. For example, a balanced number 
 of passengers and drivers ensures that all passengers get picked up and dropped 
@@ -95,20 +100,20 @@ Properties and Stakeholders:
 
 Our properties are mostly focused on the movement of the drivers/cars. 
 Procedures 1-3 focus more on the route while 4-5 focus on the claiming logic.
- We state the directions in which the cars should move to pick up or drop off a 
- passenger. In some cases this may be beneficial to the driver. For example, not 
- having to turn around ensures an easier route. Or as another example, not being 
- able to claim a passenger until you are within a block of them reduces the chance 
- of the passenger cancelling a ride. On the passenger side of things, not being 
- claimed until the driver is close may help with wait times when there are a lot 
- of drivers and also may ensure a driver is less likley to cancel on a passenger. 
- Having used rideshare apps, we have had rides cancelled on us because they arrive 
- and cannot find us or they arrive and see a wait time they were not expecting 
- (for example a concert or sporting event where all the cars leave at once). I 
- think it is important to consider the main considerations of our two major stake 
- holders. Drivers obviously value passengers that will not cancel and passengers 
- that are on their way/in their path already for convience sake. Passengers value 
- low wait times and efficient drivers as well as drivers who will not cancel. 
+We state the directions in which the cars should move to pick up or drop off a 
+passenger. In some cases this may be beneficial to the driver. For example, not 
+having to turn around ensures an easier route. Or as another example, not being 
+able to claim a passenger until you are within a block of them reduces the chance 
+of the passenger cancelling a ride. On the passenger side of things, not being 
+claimed until the driver is close may help with wait times when there are a lot 
+of drivers and also may ensure a driver is less likley to cancel on a passenger. 
+Having used rideshare apps, we have had rides cancelled on us because they arrive 
+and cannot find us or they arrive and see a wait time they were not expecting 
+(for example a concert or sporting event where all the cars leave at once). I 
+think it is important to consider the main considerations of our two major stake 
+holders. Drivers obviously value passengers that will not cancel and passengers 
+that are on their way/in their path already for convience sake. Passengers value 
+low wait times and efficient drivers as well as drivers who will not cancel. 
  
 What we proved/learned?
 - There is a very complex relationship between modeling many aspects of different systems, especially this one. Additionally, scale complexities are a very important factor. 
@@ -126,4 +131,5 @@ as each guard, rule, and predicate will effect something else.
 
 We did not collaborate with other classmates on this project. We sought help 
 from Tim and our mentor TA at our meetings. We did most of this together though 
-which was helpful for us to bounce ideas off one another and discuss. 
+which was helpful for us to bounce ideas off one another and discuss as we 
+designed and implemented. 
