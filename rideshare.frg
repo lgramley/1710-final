@@ -12,7 +12,7 @@ option min_tracelength 6
 sig Request {
     party_size: one Int,
     var fulfilled: one Int, //(0 , 1)
-    var claimed: one Int, 
+    var claimed: one Int, //(0 , 1)
     origin_x: one Int,
     origin_y: one Int,
     destination_x: one Int,
@@ -102,6 +102,8 @@ pred wellformed{
             -- ensure not more passengers than capacity
         }
 
+
+        --no drivers cannot accept the same requests
         all disj d1, d2: Driver | {
             (d1.accepted_requests not in d2.accepted_requests and d2.accepted_requests not in d1.accepted_requests) or no d1.accepted_requests or no d2.accepted_requests
         }
@@ -252,6 +254,7 @@ pred stayStill[d: Driver]{
 }
 
 pred claimingEnabled[d:Driver, p: Passenger]{
+    //conditions in which it is acceptable to accept a request
     p.request.claimed = 0
     p.request.fulfilled = 0
     d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
