@@ -1,5 +1,7 @@
 # 1710-final
 
+Video: https://drive.google.com/file/d/1M_pWcPSV7zvX97RzawNjVwZaAwT6lbMp/view?usp=sharing
+
 What tradeoffs did you make in choosing your representation? What else did you try that didn’t work as well?
 
 - We initially approached the assignment with a more object-oriented mindset 
