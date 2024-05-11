@@ -1,11 +1,6 @@
 #lang forge/temporal
 open "rideshare.frg"
 
-//test the predicates
-//test the stuff from wellformed
-//liveness and soundness/safety with different procedures
-//examples
-
 pred init_pass_logic{
     all d: Driver, p: Passenger | {
         one row, col: Int | {

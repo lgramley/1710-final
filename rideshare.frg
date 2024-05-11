@@ -38,9 +38,7 @@ one sig RequestsList{
 }
 
 //init: (initial state)
--- Passengers and Cars relatively spread out across the board
 pred init{
-    --first iteration 
 
     all d: Driver, p: Passenger | {
         one row, col: Int | {
@@ -71,15 +69,13 @@ pred init{
 
 //wellformed: (hold true for all states)
 pred wellformed{
-    --ALSO handle bounds of driver and passenger requets
-
         --requets all tied to a passenger
         all r: Request {
             some p: Passenger | {
                 p.request = r
             }
             r.party_size > 0
-            r.party_size <= 4 //later change this to current capacity
+            r.party_size <= 4 
 
             r.origin_x >= 0
             r.origin_y >= 0
@@ -100,7 +96,6 @@ pred wellformed{
         }
 
         all d: Driver | {
-            -- can probably do this in a better way
             d.capacity <= 4 //exclude driver in capacity to avoid math
             d.capacity >= 0
 
@@ -129,8 +124,6 @@ pred wellformed{
         }
 }
 
-
---Today: move predicates!!
 pred requestsStaySame {
     all r: Request | {
         r.fulfilled' = r.fulfilled
@@ -166,17 +159,17 @@ pred moveRight[d: Driver]{
 }
 
 pred moveLeftEnabled[d: Driver]{
-    not{d.location_x <= 0 //can't move right if on edge
+    not{d.location_x <= 0 //can't move left if on edge
     or (d.location_x = 2 and d.location_y = 1)
     or (d.location_x = 4 and d.location_y = 1)}
 }
 
 
 pred moveLeft[d: Driver]{
-    --column increases, row stays the same
+    --column decreases, row stays the same
     moveLeftEnabled[d]
 
-    -- next position needs to be row same, location_y + 1
+    -- next position needs to be row same, location_y - 1
     d.location_y' = d.location_y
     d.location_x' = subtract[d.location_x,1]
     
@@ -201,7 +194,7 @@ pred moveUpEnabled[d: Driver]{
 }
 
 pred moveUp[d: Driver]{
-    --column increases, row stays the same
+    --row increases, row stays the same
     moveUpEnabled[d]
 
     -- next position needs to be row same, location_y + 1
@@ -229,7 +222,7 @@ pred moveDown[d: Driver]{
     --column increases, row stays the same
     moveDownEnabled[d]
 
-    -- next position needs to be row same, location_y + 1
+    -- next position needs to be row same, location_y - 1
     d.location_y' = subtract[d.location_y, 1]
     d.location_x' = d.location_x
    
@@ -247,8 +240,6 @@ pred moveDown[d: Driver]{
 pred stayStill[d: Driver]{
     d.location_x' = d.location_x
     d.location_y' = d.location_y
-
-    --add all the other constraints later
     -- everything stays the same:
     d.accepted_requests' = d.accepted_requests
     d.passengers_in_car' = d.passengers_in_car
@@ -283,17 +274,11 @@ pred claiming[d: Driver, p: Passenger]{
 }
 
 pred pickUpEnabled[d: Driver, p: Passenger] {
-     // if a driver is in the same cell as a passenger
-    // and they are sharing a request of some sort (don't have have to worry about this for now)
     d.location_x = p.request.origin_x
     d.location_y = p.request.origin_y
     
     p.request in d.accepted_requests
     p.request.claimed = 1
-
-    //capacity is greater than number of passengers in car + party size
-    //d.capacity >= (add[#{d.passengers_in_car}, p.request.party_size])
-    //p.request not in d.accepted_requests
 }
 
 pred pickUp[d: Driver, p: Passenger] {
@@ -314,7 +299,6 @@ pred pickUp[d: Driver, p: Passenger] {
     
 }
 
-//maybe doesnt need passenger
 pred dropOffEnabled[d: Driver, p: Passenger] {
     d.location_x = p.request.destination_x
     d.location_y = p.request.destination_y
@@ -333,9 +317,8 @@ pred dropOff[d: Driver, p: Passenger] {
     p.locationy' = p.locationy
 
     p.request.fulfilled' = 1
-    // claimed goes back to 0 i guess
 
-    p.request.claimed' = p.request.claimed //goes back to being unclaimed?? how do we want to handle this
+    p.request.claimed' = p.request.claimed 
 
     //passenger no longer in driver' passengers
     d.passengers_in_car' = d.passengers_in_car - p
@@ -359,7 +342,7 @@ pred dropOffCurIfRequesting[d: Driver, p: Passenger] {
 
 pred traces {
     always wellformed
-    init --maybe
+    init 
     all d: Driver| some p: Passenger | {
         always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or claiming[d,p] or stayStill[d] or pickUp[d,p] or dropOff[d,p]}
         eventually{dropOff[d,p]}
@@ -373,16 +356,19 @@ run{
 } for exactly 2 Driver, exactly 2 Passenger
 
 
-//left right enforcers
+--left right enforcers
+--this procedure enforces that the driver moves left until it cannot move left anymore or
+    --right until it cannot anymore/hits the boundary
 pred procedure1[d: Driver, p: Passenger]{
     no p.request iff stayStill[d]
     
-
     d.location_x > p.request.origin_x => moveLeft[d]
     d.location_x < p.request.origin_x => moveRight[d]
 }
 
-//up down enforcers (not sure how well procedures 1 and 2 would work together)
+--up down enforcers
+--this procedure enforces that the driver moves up until it cannot move up anymore or
+    --right down it cannot anymore/hits the boundary
 pred procedure2[d: Driver, p: Passenger]{
     no p.request iff stayStill[d]
 
@@ -391,6 +377,7 @@ pred procedure2[d: Driver, p: Passenger]{
 }
 
 //no turnaround
+--this procedure enforces that a car never turns around until it hits a boarder
 pred procedure3[d: Driver, p: Passenger]{
     no p.request iff stayStill[d]
 
@@ -400,28 +387,24 @@ pred procedure3[d: Driver, p: Passenger]{
     d.location_y' = subtract[d.location_y, 1] => moveDown[d] until d.location_y = 0
 }
 
+//does not claim unless at same block
+--this procedure enforces that a driver does not claim a passenger unless it is within a block of that passenger
 pred procedure4[d: Driver, p:Passenger]{
     no p.request iff stayStill[d]
     {(subtract[d.location_x, p.locationx] = 1 or subtract[p.locationx, d.location_x] = 1) and (subtract[d.location_y, p.locationy] = 1 or subtract[p.locationy, d.location_y] = 1)} => claiming[d,p]
 }
 
-pred traces2{
-    always wellformed
-    init --maybe
-    all d: Driver| some p: Passenger |{
-        always {moveRight[d] or moveLeft[d] or moveUp[d] or moveDown[d] or claiming[d,p] or stayStill[d] or pickUp[d,p] or dropOff[d,p]}
-        
-        eventually{dropOff[d,p]}
-       
-        // always dropOffCurIfRequesting[d,p]
-    }
-}
-//claiming if its outside 2 blocks
+//does not claim unless at passenger
+--this procedure enforces that a driver does not claim a passenger until it is on the same spot as the passenger 
 pred procedure5[d: Driver, p:Passenger]{
     no p.request iff stayStill[d]
-    claimingEnabled[d,p] iff {subtract[d.location_x, p.locationx] = 0 or subtract[p.locationx, d.location_x] = 0 or subtract[d.location_y, p.locationy] = 0 or subtract[p.locationy, d.location_y] = 0} //else not claiming[d,p]
+    claimingEnabled[d,p] iff {subtract[d.location_x, p.locationx] = 0 or subtract[p.locationx, d.location_x] = 0 or subtract[d.location_y, p.locationy] = 0 or subtract[p.locationy, d.location_y] = 0}
 }
 
-//0 0 0 0 0 
-//0 X 0 X 0
-//0 0 0 0 0 
+--board layout
+--drivers and passengers cannot be at blocked off locations
+
+--0 0 0 0 0--
+--0 X 0 X 0--
+--0 0 0 0 0--
+
