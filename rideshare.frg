@@ -95,7 +95,7 @@ pred wellformed{
             some p: Passenger | {
                 p.request = r
             }
-            r.party_size >= 0
+            r.party_size > 0
             r.party_size <= 4 //later change this to current capacity
 
             r.origin_x >= 0
@@ -137,7 +137,18 @@ pred wellformed{
                     p.locationx' = p.locationx
                     p.locationy' = p.locationy
                 }
-            }   
+            }
+            //new------------ ensures passenger only in one car at a time
+            some disj d1, d2: Driver | p in d1.passengers_in_car implies{
+                    p not in d2.passengers_in_car
+            }
+
+            some d: Driver | p in d.passengers_in_car implies{
+                p.request in d.accepted_requests
+            }
+
+            //end new--------
+
             all p2:Passenger | p != p2 =>{
                 p.request != p2.request
 
@@ -303,7 +314,7 @@ pred pickUpEnabled[d: Driver, p: Passenger] {
     // and they are sharing a request of some sort (don't have have to worry about this for now)
     d.location_x = p.request.origin_x
     d.location_y = p.request.origin_y
-
+    
     p.request in d.accepted_requests
     p.request.claimed = 1
 
@@ -323,6 +334,7 @@ pred pickUp[d: Driver, p: Passenger] {
     p.locationx' = p.locationx
     p.locationy' = p.locationy
     // passenger added to driver' passengers
+    
     p in d.passengers_in_car'
 
     d.accepted_requests' = d.accepted_requests
@@ -407,9 +419,9 @@ pred traces {
 }
 
 
-// run{
-//     traces
-// } for exactly 1 Driver, exactly 2 Passenger
+run{
+    traces
+} for exactly 2 Driver, exactly 2 Passenger
 
 
 //0 0 0 0 0 
@@ -467,14 +479,14 @@ pred traces2{
 //claiming if its outside 2 blocks
 pred procedure5[d: Driver, p:Passenger]{
     no p.request iff stayStill[d]
-    {subtract[d.location_x, p.locationx] >= 2 or subtract[p.locationx, d.location_x] >= 2 or subtract[d.location_y, p.locationy] >= 2 or subtract[p.locationy, d.location_y] >= 2} iff claimingEnabled[d,p] //else not claiming[d,p]
+    claimingEnabled[d,p] iff {subtract[d.location_x, p.locationx] = 0 or subtract[p.locationx, d.location_x] = 0 or subtract[d.location_y, p.locationy] = 0 or subtract[p.locationy, d.location_y] = 0} //else not claiming[d,p]
 }
 
-run{
-    traces2
-    always eventually{
-    all d: Driver| some p: Passenger | {
-        procedure5[d,p]
-    }
-    }
-} for exactly 1 Driver, 1 Passenger
+// run{
+//     traces2
+//     always eventually{
+//     all d: Driver| some p: Passenger | {
+//         procedure5[d,p]
+//     }
+//     }
+// } for exactly 1 Driver, 1 Passenger

@@ -6,6 +6,81 @@ open "rideshare.frg"
 //liveness and soundness/safety with different procedures
 //examples
 
+//  all d: Driver, p: Passenger | {
+//         one row, col: Int | {
+//             (row >= 0) and (row <= 4)
+//             (col >= 0) and (col <= 2)
+//             d.location_x = row
+//             d.location_y = col
+//         }
+//         --passenger logic
+//         p.request.fulfilled = 0
+//         p.request.claimed = 0
+
+//         p.request.origin_x = d.location_x implies{
+//             p.request.origin_y != d.location_y
+//         }
+
+//         -- no passengers in cars to begin with
+//         p not in d.passengers_in_car
+
+//         p.request not in d.accepted_requests 
+//         -- passenger begins at requested location
+//         p.locationx = p.request.origin_x
+//         p.locationy = p.request.origin_y
+
+//     }
+
+pred init_pass_logic{
+    all d: Driver, p: Passenger | {
+        one row, col: Int | {
+            (row >= 0) and (row <= 4)
+            (col >= 0) and (col <= 2)
+            d.location_x = row
+            d.location_y = col
+        }
+        --passenger logic
+        p.request.fulfilled = 0
+        p.request.claimed = 0
+    }
+}
+
+pred bad_init_logic{
+    some d: Driver, p: Passenger | {
+        one row, col: Int | {
+            (row >= 0) and (row <= 4)
+            (col >= 0) and (col <= 2)
+            d.location_x = row
+            d.location_y = col
+        }
+        p.request in d.accepted_requests 
+        --passenger logic
+        p.request.fulfilled = 1
+        p.request.claimed = 1
+
+        p.locationx != p.request.origin_x
+        p.locationy != p.request.origin_y
+
+    }
+
+}
+
+pred already_in_car{
+    some d: Driver, p: Passenger | {
+        p in d.passengers_in_car
+    }
+
+}
+
+test suite for init{
+    test expect{
+        good_init:{init_pass_logic and init and wellformed} is sat
+        bad_init:{bad_init_logic and init and wellformed} is unsat
+        already_car: {already_in_car and init and wellformed} is unsat
+
+    }
+}
+
 pred wellformed_request{
     some r: Request {
         r.party_size >= 0
@@ -184,15 +259,27 @@ test suite for moveUp{
      assert all d: Driver |
         loc_y_up[d] is necessary for moveUp[d]
     test expect{
+         moveUoneatatime: {
+           some d: Driver | {
+               moveRight[d]
+               d.location_y' = add[d.location_y, 2]
+           }
+       } for exactly 1 Driver is unsat
         pmwcUp: {some d: Driver | p_move_up_with_car[d] and moveUp[d] and wellformed and passenger_still_in_car[d]} is sat
         npmwcUp: {some d: Driver | p_not_move_up_with_car[d] and moveUp[d] and wellformed} is unsat
     }
 }
 
 test suite for moveDown{
-     assert all d: Driver |
+    assert all d: Driver |
         loc_y_down[d] is necessary for moveDown[d]
     test expect{
+         moveDoneatatime: {
+           some d: Driver | {
+               moveRight[d]
+               d.location_y' = subtract[d.location_y, 2]
+           }
+       } for exactly 1 Driver is unsat
         pmwcDown: {some d: Driver | p_move_down_with_car[d] and moveDown[d] and wellformed and passenger_still_in_car[d]} is sat
         npmwcDown: {some d: Driver | p_not_move_down_with_car[d] and moveDown[d] and wellformed} is unsat
     }
@@ -203,6 +290,13 @@ test suite for moveRight{
         loc_x_right[d] is necessary for moveRight[d]
 
     test expect{
+        moveRoneatatime: {
+           some d: Driver | {
+               moveRight[d]
+               d.location_x' = add[d.location_x, 2]
+           }
+       } for exactly 1 Driver is unsat
+
         pmwcRight: {some d: Driver | p_move_right_with_car[d] and moveRight[d] and wellformed and passenger_still_in_car[d]} is sat
         npmwcRight: {some d: Driver | p_not_move_right_with_car[d] and moveRight[d] and wellformed} is unsat
     }
@@ -213,6 +307,12 @@ test suite for moveLeft{
         loc_x_left[d] is necessary for moveLeft[d]
 
     test expect{
+         moveLoneatatime: {
+           some d: Driver | {
+               moveLeft[d]
+               d.location_x' = subtract[d.location_x, 2]
+           }
+       } for exactly 1 Driver is unsat
         pmwcLeft: {some d: Driver | p_move_left_with_car[d] and moveLeft[d] and wellformed and passenger_still_in_car[d]} is sat
         npmwcLeft: {some d: Driver | p_not_move_left_with_car[d] and moveLeft[d] and wellformed} is unsat
     }
@@ -242,12 +342,27 @@ test suite for pickUp{
     test expect{
         pickedup: {some d: Driver, p: Passenger | pickedUp[d, p] and pickUp[d, p] and wellformed} is sat
         notpickedup: {some d: Driver, p: Passenger | droppedOff[d,p] and pickUp[d,p]} is unsat
+        inwrongplace_pickup: {
+           some d: Driver, p: Passenger | {
+               pickUp[d,p]
+               d.location_x != p.request.origin_x
+           }
+       } for exactly 1 Driver, 1 Passenger is unsat
     }
 }
 
 //drop off
 test suite for dropOff{
     test expect{
+        inwrongplace: {
+           some d: Driver, p: Passenger | {
+               d.location_x = p.locationx
+               d.location_y = p.locationy
+               dropOff[d,p]
+               p.locationx != p.request.destination_x
+           }
+       } for exactly 1 Driver, 1 Passenger is unsat
+
         notdroppedoff: {some d: Driver, p: Passenger | pickedUp[d, p] and dropOff[d, p] and wellformed} is unsat
         droppedoff: {some d: Driver, p: Passenger | droppedOff[d, p] and dropOff[d,p] and wellformed} is sat
     }
@@ -259,7 +374,6 @@ test suite for dropOff{
 //also add more to pick up and drop off
 
 //liveness
-//soundness/safety
 pred liveness[d: Driver] {
 	always {
 		all p: Passenger | {
@@ -276,13 +390,10 @@ pred enabled[d: Driver, p: Passenger] {
     moveDownEnabled[d]
 }
 
-// Property: Safety, or the fact that the elevator can always become enabled (no deadlock)
-// This property holds for procedures 1, 2, 3, 4, and 5
+// Property: Safety(no deadlock)
 pred safety[d: Driver, p: Passenger] {
 	always eventually enabled[d,p]
 }
-
-//liveness and safety of procedures??
 
 test expect{
     proc_1: {some d: Driver, p: Passenger | procedure1[d, p] and liveness[d] and safety[d, p]} is sat
@@ -290,4 +401,36 @@ test expect{
     proc_3: {some d: Driver, p: Passenger | procedure3[d, p] and liveness[d] and safety[d, p]} is sat
     proc_4: {some d: Driver, p: Passenger | procedure4[d, p] and liveness[d] and safety[d, p]} is sat
     proc_5: {some d: Driver, p: Passenger | procedure5[d, p] and liveness[d] and safety[d, p]} is sat
+}
+
+test suite for traces {
+    // test expect {
+    //     passenger_in_two_cars_same_time: {
+    //        traces
+    //        some p: Passenger | {
+    //            some disj d1, d2: Driver | {
+    //                eventually { p in d1.passengers_in_car}
+    //                eventually { p in d2.passengers_in_car}
+    //            }
+              
+    //        }
+    //    } for exactly 2 Passenger, 2 Driver is unsat
+   test expect {
+        passenger_in_two_cars_same_time: {
+           traces
+           some p: Passenger | {
+               some disj d1, d2: Driver | {
+                    { p in d1.passengers_in_car}
+                    { p in d2.passengers_in_car}
+               }
+              
+           }
+       } for exactly 2 Passenger, 2 Driver is unsat
+       too_big: {
+           traces
+           some p: Passenger, d: Driver | {
+               p.request.party_size > d.capacity
+           }
+       } for exactly 1 Passenger, 1 Driver is unsat
+   }
 }
